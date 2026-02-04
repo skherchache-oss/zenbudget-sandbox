@@ -1,0 +1,7 @@
+/* ZenBudget Styles */
+:root {
+  --app-bg: #f8f9fd;
+}
+body {
+  background-color: var(--app-bg);
+}
