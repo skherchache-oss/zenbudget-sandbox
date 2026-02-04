@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppState, ViewType, Transaction } from './types';
-import { getInitialState, saveState, generateId } from './store';
+import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
+
+// Firebase & Auth
+import { auth, loginWithGoogle, logout } from './firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 // Framer Motion
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +21,11 @@ import Settings from './components/Settings';
 const VIEW_ORDER: ViewType[] = ['DASHBOARD', 'TRANSACTIONS', 'RECURRING', 'SETTINGS'];
 
 const App: React.FC = () => {
+  // --- ÉTATS AUTH ---
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // --- ÉTATS APPLI ---
   const [state, setState] = useState<AppState>(() => getInitialState());
   const [activeView, setActiveView] = useState<ViewType>('DASHBOARD');
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -29,10 +38,31 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
 
-  // Sauvegarde à chaque changement d'état
+  // Surveillance de l'authentification + Chargement des données Cloud
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Charger les données depuis Firestore au login
+        const cloudData = await fetchUserData(firebaseUser);
+        setState(cloudData);
+        setUser(firebaseUser);
+      } else {
+        setUser(null);
+        // Optionnel: réinitialiser au state local si déconnecté
+        setState(getInitialState());
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Sauvegarde à chaque changement d'état (Local + Cloud)
   useEffect(() => {
     saveState(state);
-  }, [state]);
+    if (user) {
+      saveUserData(user.uid, state);
+    }
+  }, [state, user]);
 
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
@@ -44,7 +74,7 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE METIER (Calculs) ---
+  // --- LOGIQUE METIER (Calculs originaux préservés) ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
@@ -130,18 +160,56 @@ const App: React.FC = () => {
     setActiveView(newView);
   };
 
+  // --- ÉCRAN DE CHARGEMENT INITIAL ---
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#F8F9FD]">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // --- ÉCRAN DE CONNEXION (Si non authentifié) ---
+  if (!user) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FD] px-6 text-center">
+        <div className="w-20 h-20 bg-white rounded-[30px] shadow-xl flex items-center justify-center mb-6">
+          <span className="text-4xl">✨</span>
+        </div>
+        <h1 className="text-3xl font-black tracking-tighter mb-2 italic text-slate-800">ZenBudget</h1>
+        <p className="text-slate-500 mb-8 max-w-[260px] text-sm">
+          Environnement <span className="font-bold text-indigo-600 underline">Sandbox</span>. Connectez-vous pour tester la synchronisation.
+        </p>
+        
+        <button 
+          onClick={loginWithGoogle}
+          className="w-full max-w-xs py-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center gap-3 font-bold hover:bg-slate-50 active:scale-95 transition-all"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" alt="G" className="w-5 h-5" />
+          Continuer avec Google
+        </button>
+      </div>
+    );
+  }
+
+  // --- RENDU PRINCIPAL (Une fois connecté) ---
   return (
     <div className="flex flex-col h-screen bg-[#F8F9FD] text-slate-900 overflow-hidden font-sans">
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <IconLogo className="w-8 h-8 text-indigo-600" />
-            <h1 className="text-xl font-black tracking-tighter">ZenBudget</h1>
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-lg shadow-indigo-200">SB</div>
+            <h1 className="text-xl font-black tracking-tighter italic">ZenBudget</h1>
           </div>
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-             <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
-             <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
-             <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
+                <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
+                <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
+             </div>
+             <button onClick={logout} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+               <IconSettings className="w-5 h-5" />
+             </button>
           </div>
         </div>
       </header>
@@ -199,12 +267,12 @@ const App: React.FC = () => {
                 }}
                 onReset={() => {
                   if(confirm("Tout supprimer ?")) {
-                    localStorage.removeItem('zenbudget_data');
+                    localStorage.removeItem('zenbudget_state_v3');
                     setState(getInitialState());
                     setTimeout(() => window.location.reload(), 50);
                   }
                 }}
-                onUpdateCategories={()=>{}} onUpdateBudget={()=>{}} onLogout={()=>{}} 
+                onUpdateCategories={()=>{}} onUpdateBudget={()=>{}} onLogout={logout} 
                 onShowWelcome={() => setShowWelcome(true)}
                 onBackup={() => {
                   const dataStr = JSON.stringify(state);
@@ -245,9 +313,9 @@ const App: React.FC = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-end justify-center">
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[32px] p-8 pb-12 shadow-2xl">
               <div className="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6" />
-              <h2 className="text-xl font-black mb-4 text-center">Guide ZenBudget</h2>
-              <p className="text-sm text-slate-500 text-center mb-8">ZenBudget vous aide à voir clair dans votre budget réel.</p>
-              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest">Commencer</button>
+              <h2 className="text-xl font-black mb-4 text-center">Guide ZenBudget SB</h2>
+              <p className="text-sm text-slate-500 text-center mb-8">Connecté en tant que : {user?.email}</p>
+              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest">Fermer</button>
             </motion.div>
           </motion.div>
         )}
