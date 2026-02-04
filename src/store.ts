@@ -1,12 +1,18 @@
 import { AppState, BudgetAccount, Category, User } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
-import { db } from './firebase'; // Assure-toi que ce fichier existe
+import { db } from './firebase'; 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEY = 'zenbudget_state_v3';
 
+/**
+ * Génère un ID unique pour les transactions ou les comptes
+ */
 export const generateId = () => Math.random().toString(36).substring(2, 11);
 
+/**
+ * Vérifie si le LocalStorage est disponible (évite les crashs en navigation privée)
+ */
 const isStorageAvailable = () => {
   try {
     const x = '__storage_test__';
@@ -16,10 +22,13 @@ const isStorageAvailable = () => {
   } catch (e) { return false; }
 };
 
+/**
+ * Crée un compte par défaut vierge
+ */
 export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAccount => ({
   id: generateId(),
   name: 'Personnel',
-  color: '#10b981',
+  color: '#4F46E5', // Indigo par défaut
   ownerId: ownerId,
   sharedWith: [],
   transactions: [],
@@ -31,10 +40,11 @@ export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAcco
 });
 
 /**
- * LOGIQUE DE NETTOYAGE / FUSION (Reprise de ton code original)
- * Appliquée aux données venant du LocalStorage OU de Firestore
+ * LOGIQUE DE MIGRATION & FUSION
+ * Nettoie les données entrantes (JSON ou Cloud) pour éviter les erreurs
  */
 const migrateData = (parsed: any, defaultState: AppState): AppState => {
+  // 1. Fusion des catégories (garde les défauts + les personnalisées)
   const savedCategories: Category[] = parsed.categories || [];
   const mergedCategories = [...DEFAULT_CATEGORIES];
   savedCategories.forEach(sc => {
@@ -43,7 +53,9 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     }
   });
 
-  const accounts = (parsed.accounts || defaultState.accounts).map((acc: any) => ({
+  // 2. Nettoyage des comptes
+  const rawAccounts = Array.isArray(parsed.accounts) ? parsed.accounts : defaultState.accounts;
+  const accounts = rawAccounts.map((acc: any) => ({
     ...acc,
     transactions: acc.transactions || [],
     recurringTemplates: acc.recurringTemplates || [],
@@ -52,18 +64,21 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     cycleEndDay: acc.cycleEndDay ?? 28
   }));
 
+  // 3. Reconstruction de l'état
   return { 
     ...defaultState, 
     ...parsed, 
     user: parsed.user || defaultState.user,
     accounts: accounts,
     categories: mergedCategories,
-    activeAccountId: accounts.find((a: any) => a.id === parsed.activeAccountId) ? parsed.activeAccountId : accounts[0].id
+    activeAccountId: accounts.find((a: any) => a.id === parsed.activeAccountId) 
+      ? parsed.activeAccountId 
+      : accounts[0].id
   };
 };
 
 /**
- * INITIALISATION LOCALE (Au démarrage, avant Auth)
+ * INITIALISATION LOCALE (Au démarrage)
  */
 export const getInitialState = (): AppState => {
   const defaultUser: User = { id: 'local-user', email: 'local@zenbudget.app', name: 'Utilisateur Zen' };
@@ -86,13 +101,13 @@ export const getInitialState = (): AppState => {
     const parsed = JSON.parse(saved);
     return migrateData(parsed, defaultState);
   } catch (e) {
-    console.error("Erreur de restauration du stockage local", e);
+    console.error("Erreur de restauration locale:", e);
     return defaultState;
   }
 };
 
 /**
- * SAUVEGARDE LOCALE (Fallback)
+ * SAUVEGARDE LOCALE
  */
 export const saveState = (state: AppState) => {
   if (!isStorageAvailable()) return;
@@ -102,16 +117,21 @@ export const saveState = (state: AppState) => {
 };
 
 /**
- * --- NOUVELLES FONCTIONS FIRESTORE POUR LE SANDBOX ---
+ * --- FONCTIONS CLOUD FIRESTORE ---
  */
 
+/**
+ * Récupère les données de l'utilisateur sur Firebase
+ */
 export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null }): Promise<AppState> => {
   const userDocRef = doc(db, 'users', firebaseUser.uid);
+  
   const defaultUser: User = { 
     id: firebaseUser.uid, 
     email: firebaseUser.email || '', 
     name: firebaseUser.displayName || 'Utilisateur Zen' 
   };
+  
   const defaultAcc = createDefaultAccount(firebaseUser.uid);
   const defaultState: AppState = {
     user: defaultUser,
@@ -125,23 +145,29 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
   try {
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-      // On applique ta logique de migration sur les données du Cloud
+      // On fusionne les données du cloud avec la structure actuelle
       return migrateData(docSnap.data(), defaultState);
     } else {
-      // Premier login : on sauve le state par défaut (ou le local actuel)
-      await setDoc(userDocRef, defaultState);
-      return defaultState;
+      // Premier login : on tente de pousser le local actuel vers le cloud
+      const localState = getInitialState();
+      const stateToUpload = { ...localState, user: defaultUser };
+      await setDoc(userDocRef, stateToUpload);
+      return stateToUpload;
     }
   } catch (error) {
-    console.error("Erreur Firestore:", error);
+    console.error("Erreur récupération Cloud:", error);
     return defaultState;
   }
 };
 
+/**
+ * Sauvegarde les données sur Firebase
+ */
 export const saveUserData = async (userId: string, state: AppState) => {
   if (!userId || userId === 'local-user') return;
   try {
     const userDocRef = doc(db, 'users', userId);
+    // On sauvegarde l'état complet
     await setDoc(userDocRef, state);
   } catch (error) {
     console.error("Erreur sauvegarde Cloud:", error);

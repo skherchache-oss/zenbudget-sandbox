@@ -20,11 +20,8 @@ import Settings from './components/Settings';
 const VIEW_ORDER: ViewType[] = ['DASHBOARD', 'TRANSACTIONS', 'RECURRING', 'SETTINGS'];
 
 const App: React.FC = () => {
-  // --- ÉTATS AUTH ---
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-
-  // --- ÉTATS APPLI ---
   const [state, setState] = useState<AppState>(() => getInitialState());
   const [activeView, setActiveView] = useState<ViewType>('DASHBOARD');
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -39,7 +36,6 @@ const App: React.FC = () => {
 
   const isInitialMount = useRef(true);
 
-  // --- GESTION BOUTON RETOUR NAVIGATEUR ---
   useEffect(() => {
     window.history.replaceState({ view: 'DASHBOARD' }, '', '#dashboard');
     const handlePopState = (event: PopStateEvent) => {
@@ -52,7 +48,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [showAddModal, showWelcome]);
 
-  // Surveillance de l'authentification
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -68,7 +63,6 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Sauvegarde (Local + Cloud)
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
     saveState(state);
@@ -87,7 +81,6 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE METIER ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
@@ -147,6 +140,7 @@ const App: React.FC = () => {
   const handleUpsertTransaction = (t: Omit<Transaction, 'id'> & { id?: string }) => {
     setState(prev => {
       const accIndex = prev.accounts.findIndex(a => a.id === prev.activeAccountId);
+      if (accIndex === -1) return prev;
       const acc = { ...prev.accounts[accIndex] };
       let nextTx = [...acc.transactions];
       let nextDeleted = [...(acc.deletedVirtualIds || [])];
@@ -164,6 +158,7 @@ const App: React.FC = () => {
       return { ...prev, accounts: nextAccounts };
     });
     setShowAddModal(false);
+    setEditingTransaction(null);
   };
 
   const handleViewChange = (newView: ViewType) => {
@@ -192,7 +187,7 @@ const App: React.FC = () => {
         </div>
         <h1 className="text-3xl font-black tracking-tighter mb-2 italic text-slate-800">ZenBudget</h1>
         <p className="text-slate-500 mb-8 max-w-[260px] text-sm">
-          Environnement <span className="font-bold text-indigo-600 underline">Sandbox</span>. Connectez-vous pour tester la synchronisation.
+          Connectez-vous pour synchroniser vos données sur tous vos appareils.
         </p>
         <button onClick={loginWithGoogle} className="w-full max-w-xs py-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center gap-3 font-bold hover:bg-slate-50 active:scale-95 transition-all">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" alt="G" className="w-5 h-5" />
@@ -207,7 +202,7 @@ const App: React.FC = () => {
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-lg shadow-indigo-200">SB</div>
+             <IconLogo className="w-8 h-8" />
             <h1 className="text-xl font-black tracking-tighter italic">ZenBudget</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -216,7 +211,7 @@ const App: React.FC = () => {
                 <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
                 <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
              </div>
-             <button onClick={logout} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+             <button onClick={() => handleViewChange('SETTINGS')} className="p-2 text-slate-400">
                <IconSettings className="w-5 h-5" />
              </button>
           </div>
@@ -242,7 +237,7 @@ const App: React.FC = () => {
                 transactions={effectiveTransactions} categories={state.categories} activeAccount={activeAccount} allAccounts={state.accounts}
                 onSwitchAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))} month={currentMonth} year={currentYear}
                 onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
-                availableBalance={getBalanceAtDate(new Date(now.getFullYear(), now.getMonth()+1, 0), true)} projectedBalance={projectedBalance} carryOver={carryOver}
+                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 28), true)} projectedBalance={projectedBalance} carryOver={carryOver}
               />
             )}
             {activeView === 'TRANSACTIONS' && (
@@ -282,7 +277,9 @@ const App: React.FC = () => {
                     setTimeout(() => window.location.reload(), 50);
                   }
                 }}
-                onUpdateCategories={()=>{}} onUpdateBudget={()=>{}} onLogout={logout} 
+                onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
+                onUpdateBudget={()=>{}} 
+                onLogout={logout} 
                 onShowWelcome={() => setShowWelcome(true)}
                 onBackup={() => {
                   const dataStr = JSON.stringify(state);
@@ -292,11 +289,25 @@ const App: React.FC = () => {
                   link.setAttribute('download', 'zenbudget_backup.json');
                   link.click();
                 }} 
-                onImport={(file) => {
+                onImport={async (file) => {
                   const reader = new FileReader();
-                  reader.onload = (e) => {
-                    const json = JSON.parse(e.target?.result as string);
-                    if(json.accounts) setState(json);
+                  reader.onload = async (e) => {
+                    try {
+                      const json = JSON.parse(e.target?.result as string);
+                      if (json.accounts) {
+                        // 1. Mise à jour locale
+                        setState(json);
+                        saveState(json);
+                        // 2. Mise à jour Cloud si connecté
+                        if (user) {
+                          await saveUserData(user.uid, json);
+                        }
+                        alert("Importation réussie ! Rechargement en cours...");
+                        window.location.reload();
+                      }
+                    } catch (err) {
+                      alert("Fichier de backup invalide.");
+                    }
                   };
                   reader.readAsText(file);
                 }}
@@ -322,7 +333,7 @@ const App: React.FC = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-end justify-center">
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[32px] p-8 pb-12 shadow-2xl">
               <div className="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6" />
-              <h2 className="text-xl font-black mb-4 text-center text-slate-800">Guide ZenBudget SB</h2>
+              <h2 className="text-xl font-black mb-4 text-center text-slate-800">Guide ZenBudget</h2>
               <p className="text-sm text-slate-500 text-center mb-8 leading-relaxed">Connecté en tant que : <br/><span className="font-bold text-indigo-600">{user?.email}</span></p>
               <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">Fermer</button>
             </motion.div>
