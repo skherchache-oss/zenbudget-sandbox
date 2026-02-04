@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppState, ViewType, Transaction } from './types';
 import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
@@ -38,17 +37,30 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
 
-  // Surveillance de l'authentification + Chargement des données Cloud
+  const isInitialMount = useRef(true);
+
+  // --- GESTION BOUTON RETOUR NAVIGATEUR ---
+  useEffect(() => {
+    window.history.replaceState({ view: 'DASHBOARD' }, '', '#dashboard');
+    const handlePopState = (event: PopStateEvent) => {
+      if (showAddModal) { setShowAddModal(false); setEditingTransaction(null); return; }
+      if (showWelcome) { setShowWelcome(false); return; }
+      if (event.state?.view) setActiveView(event.state.view);
+      else setActiveView('DASHBOARD');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showAddModal, showWelcome]);
+
+  // Surveillance de l'authentification
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Charger les données depuis Firestore au login
         const cloudData = await fetchUserData(firebaseUser);
         setState(cloudData);
         setUser(firebaseUser);
       } else {
         setUser(null);
-        // Optionnel: réinitialiser au state local si déconnecté
         setState(getInitialState());
       }
       setAuthLoading(false);
@@ -56,8 +68,9 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Sauvegarde à chaque changement d'état (Local + Cloud)
+  // Sauvegarde (Local + Cloud)
   useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
     saveState(state);
     if (user) {
       saveUserData(user.uid, state);
@@ -74,7 +87,7 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE METIER (Calculs originaux préservés) ---
+  // --- LOGIQUE METIER ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
@@ -154,13 +167,15 @@ const App: React.FC = () => {
   };
 
   const handleViewChange = (newView: ViewType) => {
-    const currentIndex = VIEW_ORDER.indexOf(activeView);
-    const nextIndex = VIEW_ORDER.indexOf(newView);
-    setViewDirection(nextIndex > currentIndex ? 1 : -1);
-    setActiveView(newView);
+    if (newView !== activeView) {
+      const currentIndex = VIEW_ORDER.indexOf(activeView);
+      const nextIndex = VIEW_ORDER.indexOf(newView);
+      setViewDirection(nextIndex > currentIndex ? 1 : -1);
+      window.history.pushState({ view: newView }, '', `#${newView.toLowerCase()}`);
+      setActiveView(newView);
+    }
   };
 
-  // --- ÉCRAN DE CHARGEMENT INITIAL ---
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F8F9FD]">
@@ -169,7 +184,6 @@ const App: React.FC = () => {
     );
   }
 
-  // --- ÉCRAN DE CONNEXION (Si non authentifié) ---
   if (!user) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FD] px-6 text-center">
@@ -180,11 +194,7 @@ const App: React.FC = () => {
         <p className="text-slate-500 mb-8 max-w-[260px] text-sm">
           Environnement <span className="font-bold text-indigo-600 underline">Sandbox</span>. Connectez-vous pour tester la synchronisation.
         </p>
-        
-        <button 
-          onClick={loginWithGoogle}
-          className="w-full max-w-xs py-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center gap-3 font-bold hover:bg-slate-50 active:scale-95 transition-all"
-        >
+        <button onClick={loginWithGoogle} className="w-full max-w-xs py-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center gap-3 font-bold hover:bg-slate-50 active:scale-95 transition-all">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" alt="G" className="w-5 h-5" />
           Continuer avec Google
         </button>
@@ -192,7 +202,6 @@ const App: React.FC = () => {
     );
   }
 
-  // --- RENDU PRINCIPAL (Une fois connecté) ---
   return (
     <div className="flex flex-col h-screen bg-[#F8F9FD] text-slate-900 overflow-hidden font-sans">
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
@@ -261,6 +270,7 @@ const App: React.FC = () => {
                 onDeleteAccount={(id) => {
                   setState(prev => {
                     const nextAccounts = prev.accounts.filter(a => a.id !== id);
+                    if (nextAccounts.length === 0) return prev;
                     const nextActive = prev.activeAccountId === id ? nextAccounts[0].id : prev.activeAccountId;
                     return { ...prev, accounts: nextAccounts, activeAccountId: nextActive };
                   });
@@ -307,15 +317,14 @@ const App: React.FC = () => {
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
-      {/* Pop-up Guide */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-end justify-center">
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[32px] p-8 pb-12 shadow-2xl">
               <div className="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6" />
-              <h2 className="text-xl font-black mb-4 text-center">Guide ZenBudget SB</h2>
-              <p className="text-sm text-slate-500 text-center mb-8">Connecté en tant que : {user?.email}</p>
-              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest">Fermer</button>
+              <h2 className="text-xl font-black mb-4 text-center text-slate-800">Guide ZenBudget SB</h2>
+              <p className="text-sm text-slate-500 text-center mb-8 leading-relaxed">Connecté en tant que : <br/><span className="font-bold text-indigo-600">{user?.email}</span></p>
+              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">Fermer</button>
             </motion.div>
           </motion.div>
         )}
@@ -331,6 +340,4 @@ const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.React
   </button>
 );
 
-const container = document.getElementById('root');
-if (container) { createRoot(container).render(<App />); }
 export default App;
