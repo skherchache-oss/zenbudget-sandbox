@@ -35,11 +35,9 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
 
-  // RÉGULATEURS ANTI-DOUBLONS & IMPORT
   const isDataReady = useRef(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Authentification et Récupération Cloud
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -66,10 +64,8 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Sauvegarde Automatique
   useEffect(() => {
     if (!isDataReady.current || authLoading || isImporting) return;
-
     saveState(state);
     if (fbUser && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, state);
@@ -86,26 +82,29 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE CALCULS (Renforcée contre les erreurs d'import) ---
+  // --- LOGIQUE DE CALCUL ROBUSTE ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount || isImporting) return 0;
     
-    // 1. Solde réel basé sur les transactions physiques
+    // 1. Calcul du solde réel (Transactions saisies)
     let balance = activeAccount.transactions.reduce((acc, t) => {
-      return new Date(t.date) <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
+      const tDate = new Date(t.date);
+      tDate.setHours(12, 0, 0, 0); // Normalisation
+      return tDate <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
 
-    // 2. Ajout des projections (Seulement si nécessaire)
+    // 2. Ajout des prévisions non encore payées
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
-      let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
       
+      // On scanne les 6 mois passés pour inclure les retards éventuels
+      let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
       while (scanDate <= targetDate) {
         const m = scanDate.getMonth();
         const y = scanDate.getFullYear();
         
-        // On vérifie quelles transactions réelles sont liées à un template pour ce mois précis
+        // Détection intelligente des doublons par templateId
         const paidTemplateIds = new Set(activeAccount.transactions
           .filter(t => {
             const d = new Date(t.date);
@@ -117,8 +116,10 @@ const App: React.FC = () => {
         templates.forEach(tpl => {
           if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
           const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
+          const vDate = new Date(y, m, day, 12, 0, 0);
           const vId = `virtual-${tpl.id}-${m}-${y}`;
-          if (new Date(y, m, day) <= targetDate && !deletedIds.has(vId)) {
+          
+          if (vDate <= targetDate && !deletedIds.has(vId)) {
             balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
           }
         });
@@ -137,8 +138,10 @@ const App: React.FC = () => {
       const d = new Date(t.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
+    
     const paidIds = new Set(realOnes.map(t => t.templateId).filter(Boolean));
     const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
+    
     const virtuals = (activeAccount.recurringTemplates || [])
       .filter(tpl => tpl.isActive && !paidIds.has(tpl.id))
       .map(tpl => {
@@ -151,6 +154,7 @@ const App: React.FC = () => {
           isRecurring: true, templateId: tpl.id
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
+      
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeAccount, currentMonth, currentYear, isImporting]);
 
@@ -162,6 +166,7 @@ const App: React.FC = () => {
       let nextTx = [...acc.transactions];
       let nextDeleted = [...(acc.deletedVirtualIds || [])];
       const targetId = t.id || editingTransaction?.id;
+      
       if (targetId?.startsWith('virtual-')) {
         nextDeleted.push(targetId!);
         nextTx = [{ ...t, id: generateId(), templateId: targetId.split('-')[1] } as Transaction, ...nextTx];
@@ -170,6 +175,7 @@ const App: React.FC = () => {
       } else {
         nextTx = [{ ...t, id: generateId() } as Transaction, ...nextTx];
       }
+      
       const nextAccounts = [...prev.accounts];
       nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
       return { ...prev, accounts: nextAccounts };
@@ -187,7 +193,6 @@ const App: React.FC = () => {
   };
 
   if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#F8F9FD]"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
-
   if (!fbUser) return <AuthScreen onLocalMode={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} />;
 
   return (
@@ -220,7 +225,7 @@ const App: React.FC = () => {
                 transactions={effectiveTransactions} categories={state.categories} activeAccount={activeAccount} allAccounts={state.accounts}
                 onSwitchAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))} month={currentMonth} year={currentYear}
                 onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
-                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 28), true)} projectedBalance={projectedBalance} carryOver={carryOver}
+                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 25), true)} projectedBalance={projectedBalance} carryOver={carryOver}
               />
             )}
             {activeView === 'TRANSACTIONS' && (
@@ -272,14 +277,10 @@ const App: React.FC = () => {
                       const imported = JSON.parse(e.target?.result as string);
                       setIsImporting(true);
                       isDataReady.current = false;
-                      
-                      // On force le state importé mais on garde l'ID utilisateur actuel
                       const finalState = { ...imported, user: state.user };
                       setState(finalState);
-                      
                       if (fbUser) await saveUserData(fbUser.uid, finalState);
-                      
-                      alert("Import réussi ! Redémarrage...");
+                      alert("Import réussi !");
                       window.location.reload();
                     } catch (err) { alert("Fichier invalide"); } 
                   }; 
@@ -302,7 +303,6 @@ const App: React.FC = () => {
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
-      {/* GUIDE ZEN MIS À JOUR 🌿 */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
