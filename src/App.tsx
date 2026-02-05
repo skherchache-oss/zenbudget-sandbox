@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppState, ViewType, Transaction, User } from './types';
+import { AppState, ViewType, Transaction, BudgetAccount } from './types';
 import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
@@ -54,7 +54,6 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const cloudData = await fetchUserData(firebaseUser);
-        // On injecte les infos Google dans le state pour l'affichage
         setState({
           ...cloudData,
           user: {
@@ -284,7 +283,7 @@ const App: React.FC = () => {
             {activeView === 'SETTINGS' && (
               <Settings 
                 state={state} 
-                user={fbUser} // <--- AJOUT CRUCIAL : On passe l'utilisateur Firebase ici
+                user={fbUser}
                 onUpdateAccounts={(accs) => setState(prev => ({ ...prev, accounts: accs }))}
                 onSetActiveAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))}
                 onDeleteAccount={(id) => {
@@ -321,12 +320,25 @@ const App: React.FC = () => {
                     try {
                       const json = JSON.parse(e.target?.result as string);
                       if (json.accounts) {
-                        setState(json);
-                        saveState(json);
+                        // --- LOGIQUE ANTI-DOUBLONS ---
+                        const newState = { ...json };
+                        newState.accounts = json.accounts.map((importedAcc: BudgetAccount) => {
+                          const existingAcc = state.accounts.find(a => a.id === importedAcc.id);
+                          if (existingAcc) {
+                            // On fusionne les transactions en garantissant l'unicité par ID
+                            const allTx = [...importedAcc.transactions, ...existingAcc.transactions];
+                            const uniqueTx = Array.from(new Map(allTx.map(t => [t.id, t])).values());
+                            return { ...importedAcc, transactions: uniqueTx };
+                          }
+                          return importedAcc;
+                        });
+
+                        setState(newState);
+                        saveState(newState);
                         if (fbUser && fbUser.uid !== 'local-user') {
-                          await saveUserData(fbUser.uid, json);
+                          await saveUserData(fbUser.uid, newState);
                         }
-                        alert("Importation réussie !");
+                        alert("Importation réussie (sans doublons) !");
                         window.location.reload();
                       }
                     } catch (err) { alert("Fichier invalide."); }
