@@ -11,7 +11,7 @@ const STORAGE_KEY = 'zenbudget_state_v3';
 export const generateId = () => Math.random().toString(36).substring(2, 11);
 
 /**
- * Vérifie si le LocalStorage est disponible (évite les crashs en navigation privée)
+ * Vérifie si le LocalStorage est disponible
  */
 const isStorageAvailable = () => {
   try {
@@ -28,7 +28,7 @@ const isStorageAvailable = () => {
 export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAccount => ({
   id: generateId(),
   name: 'Personnel',
-  color: '#4F46E5', // Indigo par défaut
+  color: '#4F46E5', 
   ownerId: ownerId,
   sharedWith: [],
   transactions: [],
@@ -41,10 +41,10 @@ export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAcco
 
 /**
  * LOGIQUE DE MIGRATION & FUSION
- * Nettoie les données entrantes (JSON ou Cloud) pour éviter les erreurs
+ * Nettoie les données pour éviter les crashs si des champs sont manquants
  */
 const migrateData = (parsed: any, defaultState: AppState): AppState => {
-  // 1. Fusion des catégories (garde les défauts + les personnalisées)
+  // 1. Fusion des catégories
   const savedCategories: Category[] = parsed.categories || [];
   const mergedCategories = [...DEFAULT_CATEGORIES];
   savedCategories.forEach(sc => {
@@ -53,7 +53,7 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     }
   });
 
-  // 2. Nettoyage des comptes
+  // 2. Nettoyage et complétion des comptes
   const rawAccounts = Array.isArray(parsed.accounts) ? parsed.accounts : defaultState.accounts;
   const accounts = rawAccounts.map((acc: any) => ({
     ...acc,
@@ -61,16 +61,19 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     recurringTemplates: acc.recurringTemplates || [],
     deletedVirtualIds: acc.deletedVirtualIds || [],
     recurringSyncLog: acc.recurringSyncLog || [],
-    cycleEndDay: acc.cycleEndDay ?? 28
+    cycleEndDay: acc.cycleEndDay ?? 28,
+    color: acc.color || '#4F46E5',
+    name: acc.name || 'Sans titre'
   }));
 
-  // 3. Reconstruction de l'état
+  // 3. Reconstruction de l'état final
   return { 
     ...defaultState, 
     ...parsed, 
     user: parsed.user || defaultState.user,
     accounts: accounts,
     categories: mergedCategories,
+    tasks: parsed.tasks || [],
     activeAccountId: accounts.find((a: any) => a.id === parsed.activeAccountId) 
       ? parsed.activeAccountId 
       : accounts[0].id
@@ -78,7 +81,7 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
 };
 
 /**
- * INITIALISATION LOCALE (Au démarrage)
+ * INITIALISATION LOCALE
  */
 export const getInitialState = (): AppState => {
   const defaultUser: User = { id: 'local-user', email: 'local@zenbudget.app', name: 'Utilisateur Zen' };
@@ -112,8 +115,12 @@ export const getInitialState = (): AppState => {
 export const saveState = (state: AppState) => {
   if (!isStorageAvailable()) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {}
+    // On ne sauvegarde pas l'état de vue ou de chargement pour éviter les bugs au reload
+    const { activeView, ...stateToSave } = state;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  } catch (e) {
+    console.error("Erreur sauvegarde locale:", e);
+  }
 };
 
 /**
@@ -121,20 +128,21 @@ export const saveState = (state: AppState) => {
  */
 
 /**
- * Récupère les données de l'utilisateur sur Firebase
+ * Récupère ou Initialise les données Cloud
  */
-export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null }): Promise<AppState> => {
+export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null, photoURL?: string | null }): Promise<AppState> => {
   const userDocRef = doc(db, 'users', firebaseUser.uid);
   
-  const defaultUser: User = { 
+  const currentUser: User = { 
     id: firebaseUser.uid, 
     email: firebaseUser.email || '', 
-    name: firebaseUser.displayName || 'Utilisateur Zen' 
+    name: firebaseUser.displayName || 'Utilisateur Zen',
+    photoURL: firebaseUser.photoURL || undefined
   };
   
   const defaultAcc = createDefaultAccount(firebaseUser.uid);
   const defaultState: AppState = {
-    user: defaultUser,
+    user: currentUser,
     accounts: [defaultAcc],
     activeAccountId: defaultAcc.id,
     categories: DEFAULT_CATEGORIES,
@@ -145,12 +153,24 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
   try {
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-      // On fusionne les données du cloud avec la structure actuelle
+      // Fusion Cloud -> Local
       return migrateData(docSnap.data(), defaultState);
     } else {
-      // Premier login : on tente de pousser le local actuel vers le cloud
+      // Premier login : on récupère l'existant local pour ne pas perdre les données saisies avant login
       const localState = getInitialState();
-      const stateToUpload = { ...localState, user: defaultUser };
+      
+      // On met à jour l'ID du propriétaire des comptes locaux vers l'ID Firebase
+      const migratedAccounts = localState.accounts.map(acc => ({
+        ...acc,
+        ownerId: firebaseUser.uid
+      }));
+
+      const stateToUpload: AppState = { 
+        ...localState, 
+        user: currentUser, 
+        accounts: migratedAccounts 
+      };
+
       await setDoc(userDocRef, stateToUpload);
       return stateToUpload;
     }
@@ -161,14 +181,15 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
 };
 
 /**
- * Sauvegarde les données sur Firebase
+ * Sauvegarde sur Firebase
  */
 export const saveUserData = async (userId: string, state: AppState) => {
   if (!userId || userId === 'local-user') return;
   try {
     const userDocRef = doc(db, 'users', userId);
-    // On sauvegarde l'état complet
-    await setDoc(userDocRef, state);
+    // On retire l'activeView avant l'upload pour garder la propreté des données
+    const { activeView, ...cloudData } = state;
+    await setDoc(userDocRef, cloudData);
   } catch (error) {
     console.error("Erreur sauvegarde Cloud:", error);
   }

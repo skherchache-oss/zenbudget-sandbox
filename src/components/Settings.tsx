@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'; 
-import { AppState, BudgetAccount, User } from '../types'; 
+import { AppState, BudgetAccount, Category, User } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
 
@@ -9,9 +9,9 @@ interface SettingsProps {
   onSetActiveAccount: (id: string) => void; 
   onDeleteAccount: (id: string) => void; 
   onReset: () => void; 
-  onUpdateCategories: (cats: any) => void; 
+  onUpdateCategories: (cats: Category[]) => void; 
   onUpdateBudget: (val: number) => void; 
-  onLogin: (user: User) => void;
+  onLogin: () => void; // Adapté pour déclencher loginWithGoogle de App.tsx
   onLogout: () => void; 
   onShowWelcome: () => void; 
   onBackup: () => void;
@@ -76,15 +76,12 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
-  const [showAuthForm, setShowAuthForm] = useState(false);
-  const [email, setEmail] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeAccount = state.accounts.find(a => a.id === state.activeAccountId); 
   const currentCycleDay = activeAccount?.cycleEndDay || 0;
   const presets = [25, 26, 27, 28, 0];
   const isCustomDay = !presets.includes(currentCycleDay);
-  const isLocalUser = state.user?.id === 'local-user';
 
   const SectionTitle: React.FC<{ title: string }> = ({ title }) => ( 
     <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-3">{title}</h2> 
@@ -125,27 +122,6 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
     }
   };
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    onLogin({
-      id: 'user-' + Math.random().toString(36).substr(2, 5),
-      email: email,
-      name: email.split('@')[0],
-    });
-    setShowAuthForm(false);
-  };
-
-  const handleGoogleLogin = () => {
-    onLogin({
-      id: 'google-' + Math.random().toString(36).substr(2, 5),
-      email: 'zen.user@gmail.com',
-      name: 'Utilisateur Zen',
-      photoURL: 'https://ui-avatars.com/api/?name=Zen+User&background=4f46e5&color=fff'
-    });
-    setShowAuthForm(false);
-  };
-
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
@@ -165,49 +141,26 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <h3 className="font-black text-slate-800 text-[14px] leading-tight">
-                  {isLocalUser ? 'Mode Invité' : state.user?.name}
+                  {state.user ? state.user.name : 'Utilisateur Invité'}
                 </h3>
-                <div className={`w-1.5 h-1.5 rounded-full ${isLocalUser ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${state.user ? 'bg-emerald-500' : 'bg-amber-400'}`} />
               </div>
               <p className="text-[10px] font-medium text-slate-400">
-                {isLocalUser ? 'Données stockées localement' : state.user?.email}
+                {state.user ? state.user.email : 'Données stockées localement'}
               </p>
             </div>
           </div>
           
           <button 
-            onClick={() => isLocalUser ? setShowAuthForm(!showAuthForm) : onLogout()}
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isLocalUser ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 border border-slate-100'}`}
+            onClick={() => state.user ? onLogout() : onLogin()}
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!state.user ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 border border-slate-100'}`}
           >
-            {isLocalUser ? (showAuthForm ? 'Fermer' : 'Connexion') : 'Déconnexion'}
+            {state.user ? 'Déconnexion' : 'Connexion'}
           </button>
         </div>
-
-        {isLocalUser && showAuthForm && (
-          <div className="pt-4 border-t border-slate-50 space-y-4 animate-in fade-in duration-300">
-            <div className="flex gap-2">
-              <button onClick={handleGoogleLogin} className="flex-1 py-3 bg-white border border-slate-100 rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all">
-                <img src="https://www.google.com/favicon.ico" className="w-3 h-3" alt="G" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Google</span>
-              </button>
-              <div className="flex items-center text-[8px] font-black text-slate-300 uppercase px-2">Ou</div>
-              <form onSubmit={handleAuthSubmit} className="flex-[2] flex gap-2">
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                  placeholder="votre@email.com" 
-                  className="flex-1 bg-slate-50 border-none rounded-xl px-3 py-2 text-[10px] font-bold outline-none"
-                  required
-                />
-                <button type="submit" className="bg-slate-900 text-white px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">OK</button>
-              </form>
-            </div>
-            <p className="text-[8px] text-center text-slate-400 font-medium">Connectez-vous pour synchroniser vos comptes sur tous vos appareils.</p>
-          </div>
-        )}
       </section>
 
+      {/* SECTION AIDE */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
@@ -221,6 +174,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
         </div> 
       </section>
 
+      {/* SECTION COMPTES */}
       <section> 
         <SectionTitle title="Mes Comptes" /> 
         <div className="space-y-1"> 
@@ -254,6 +208,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
         </div> 
       </section>
 
+      {/* CYCLE BUDGETAIRE */}
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
@@ -275,10 +230,9 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
                 <span className="text-[5px] font-black uppercase tracking-tighter">{day === 0 ? 'Fin de mois' : 'Du mois'}</span>
               </button>
             ))}
-            
             {isCustomDay && (
               <button
-                onClick={() => {}}
+                disabled
                 className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg"
               >
                 <span className="text-[11px] font-black">{currentCycleDay}</span>
@@ -299,6 +253,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
         </div>
       </section>
 
+      {/* SAUVEGARDE */}
       <section>
         <SectionTitle title="Sauvegarde" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
@@ -318,6 +273,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
         </div>
       </section>
 
+      {/* DANGER ZONE */}
       <section className="pt-4 space-y-4"> 
         <div className="bg-slate-900 rounded-[32px] p-6 text-center relative overflow-hidden"> 
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full" /> 
@@ -328,7 +284,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
             onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}  
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
-            Signaler un bug ou proposer une idée ✨ 
+            Signaler un bug ✨ 
           </button> 
         </div> 
 
@@ -341,7 +297,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
       </section> 
 
       <div className="text-center pb-10"> 
-        <p className="text-[7px] text-slate-200 font-black uppercase tracking-[0.5em]">Zen & Secure Financial Freedom</p> 
+        <p className="text-[7px] text-slate-200 font-black uppercase tracking-[0.5em]">ZenBudget — 2026 Edition</p> 
       </div> 
     </div> 
   ); 

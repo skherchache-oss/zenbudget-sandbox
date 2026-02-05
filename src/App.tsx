@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppState, ViewType, Transaction } from './types';
+import { AppState, ViewType, Transaction, User } from './types';
 import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
@@ -20,7 +20,7 @@ import Settings from './components/Settings';
 const VIEW_ORDER: ViewType[] = ['DASHBOARD', 'TRANSACTIONS', 'RECURRING', 'SETTINGS'];
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [fbUser, setFbUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [state, setState] = useState<AppState>(() => getInitialState());
   const [activeView, setActiveView] = useState<ViewType>('DASHBOARD');
@@ -36,6 +36,7 @@ const App: React.FC = () => {
 
   const isInitialMount = useRef(true);
 
+  // Gestion du bouton retour mobile et navigation
   useEffect(() => {
     window.history.replaceState({ view: 'DASHBOARD' }, '', '#dashboard');
     const handlePopState = (event: PopStateEvent) => {
@@ -48,14 +49,17 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [showAddModal, showWelcome]);
 
+  // Surveillance de l'état Auth Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // L'utilisateur est connecté, on récupère ses données Cloud
         const cloudData = await fetchUserData(firebaseUser);
         setState(cloudData);
-        setUser(firebaseUser);
+        setFbUser(firebaseUser);
       } else {
-        setUser(null);
+        // L'utilisateur est déconnecté, on revient à l'état local
+        setFbUser(null);
         setState(getInitialState());
       }
       setAuthLoading(false);
@@ -63,13 +67,18 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Sauvegarde automatique (Locale + Cloud)
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
+    
+    // 1. Toujours sauvegarder en local pour la rapidité
     saveState(state);
-    if (user) {
-      saveUserData(user.uid, state);
+    
+    // 2. Sauvegarder sur Firebase si connecté et si ce n'est pas l'ID local
+    if (fbUser && state.user && state.user.id !== 'local-user') {
+      saveUserData(fbUser.uid, state);
     }
-  }, [state, user]);
+  }, [state, fbUser]);
 
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
@@ -81,22 +90,28 @@ const App: React.FC = () => {
     return d;
   }, []);
 
+  // Calcul du solde à une date précise (incluant projections)
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
       return new Date(t.date) <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
+
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
+      // On scanne les 6 derniers mois pour les récurrences manquées
       let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      
       while (scanDate <= targetDate) {
         const m = scanDate.getMonth();
         const y = scanDate.getFullYear();
+        
         const paidTemplateIds = new Set(activeAccount.transactions.filter(t => {
           const d = new Date(t.date);
           return d.getMonth() === m && d.getFullYear() === y && t.templateId;
         }).map(t => t.templateId));
+
         templates.forEach(tpl => {
           if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
           const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
@@ -122,6 +137,7 @@ const App: React.FC = () => {
     });
     const paidIds = new Set(realOnes.map(t => t.templateId).filter(Boolean));
     const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
+    
     const virtuals = (activeAccount.recurringTemplates || [])
       .filter(tpl => tpl.isActive && !paidIds.has(tpl.id))
       .map(tpl => {
@@ -134,6 +150,7 @@ const App: React.FC = () => {
           isRecurring: true, templateId: tpl.id
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
+
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeAccount, currentMonth, currentYear]);
 
@@ -144,7 +161,9 @@ const App: React.FC = () => {
       const acc = { ...prev.accounts[accIndex] };
       let nextTx = [...acc.transactions];
       let nextDeleted = [...(acc.deletedVirtualIds || [])];
+      
       const targetId = t.id || editingTransaction?.id;
+      
       if (targetId?.startsWith('virtual-')) {
         nextDeleted.push(targetId!);
         nextTx = [{ ...t, id: generateId(), templateId: targetId.split('-')[1] } as Transaction, ...nextTx];
@@ -153,6 +172,7 @@ const App: React.FC = () => {
       } else {
         nextTx = [{ ...t, id: generateId() } as Transaction, ...nextTx];
       }
+      
       const nextAccounts = [...prev.accounts];
       nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
       return { ...prev, accounts: nextAccounts };
@@ -179,19 +199,22 @@ const App: React.FC = () => {
     );
   }
 
-  if (!user) {
+  if (!fbUser) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FD] px-6 text-center">
         <div className="w-20 h-20 bg-white rounded-[30px] shadow-xl flex items-center justify-center mb-6">
-          <span className="text-4xl">✨</span>
+          <IconLogo className="w-12 h-12" />
         </div>
         <h1 className="text-3xl font-black tracking-tighter mb-2 italic text-slate-800">ZenBudget</h1>
         <p className="text-slate-500 mb-8 max-w-[260px] text-sm">
-          Connectez-vous pour synchroniser vos données sur tous vos appareils.
+          Gérez vos finances avec clarté. Connectez-vous pour sauvegarder vos données.
         </p>
         <button onClick={loginWithGoogle} className="w-full max-w-xs py-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center gap-3 font-bold hover:bg-slate-50 active:scale-95 transition-all">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" alt="G" className="w-5 h-5" />
           Continuer avec Google
+        </button>
+        <button onClick={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Continuer en mode local
         </button>
       </div>
     );
@@ -279,6 +302,7 @@ const App: React.FC = () => {
                 }}
                 onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
                 onUpdateBudget={()=>{}} 
+                onLogin={loginWithGoogle} 
                 onLogout={logout} 
                 onShowWelcome={() => setShowWelcome(true)}
                 onBackup={() => {
@@ -295,19 +319,15 @@ const App: React.FC = () => {
                     try {
                       const json = JSON.parse(e.target?.result as string);
                       if (json.accounts) {
-                        // 1. Mise à jour locale
                         setState(json);
                         saveState(json);
-                        // 2. Mise à jour Cloud si connecté
-                        if (user) {
-                          await saveUserData(user.uid, json);
+                        if (fbUser && fbUser.uid !== 'local-user') {
+                          await saveUserData(fbUser.uid, json);
                         }
-                        alert("Importation réussie ! Rechargement en cours...");
+                        alert("Importation réussie !");
                         window.location.reload();
                       }
-                    } catch (err) {
-                      alert("Fichier de backup invalide.");
-                    }
+                    } catch (err) { alert("Fichier invalide."); }
                   };
                   reader.readAsText(file);
                 }}
@@ -317,8 +337,10 @@ const App: React.FC = () => {
         </AnimatePresence>
       </main>
 
+      {/* Bouton d'ajout flottant */}
       <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
 
+      {/* Navigation basse */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center pt-2 pb-8 px-6 z-40">
         <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Stats" />
         <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" />
@@ -326,16 +348,20 @@ const App: React.FC = () => {
         <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Réglages" />
       </nav>
 
+      {/* Modales */}
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
       <AnimatePresence>
         {showWelcome && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-end justify-center">
-            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[32px] p-8 pb-12 shadow-2xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-end justify-center" onClick={() => setShowWelcome(false)}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[32px] p-8 pb-12 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6" />
-              <h2 className="text-xl font-black mb-4 text-center text-slate-800">Guide ZenBudget</h2>
-              <p className="text-sm text-slate-500 text-center mb-8 leading-relaxed">Connecté en tant que : <br/><span className="font-bold text-indigo-600">{user?.email}</span></p>
-              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">Fermer</button>
+              <h2 className="text-xl font-black mb-4 text-center text-slate-800">ZenBudget Guide</h2>
+              <p className="text-sm text-slate-500 text-center mb-8 leading-relaxed">
+                Vos données sont synchronisées avec : <br/>
+                <span className="font-bold text-indigo-600">{state.user?.email || 'Mode Local'}</span>
+              </p>
+              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">C'est compris</button>
             </motion.div>
           </motion.div>
         )}

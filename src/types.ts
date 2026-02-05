@@ -1,4 +1,3 @@
-
 export type TransactionType = 'INCOME' | 'EXPENSE';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 export type ViewType = 'DASHBOARD' | 'TRANSACTIONS' | 'RECURRING' | 'SETTINGS';
@@ -39,7 +38,7 @@ export interface Transaction {
   comment?: string;
   type: TransactionType;
   isRecurring: boolean;
-  templateId?: string; // ID du template d'origine pour la synchro
+  templateId?: string; 
 }
 
 export interface RecurringTemplate {
@@ -61,13 +60,13 @@ export interface BudgetAccount {
   transactions: Transaction[];
   recurringTemplates: RecurringTemplate[];
   recurringSyncLog: string[];
-  deletedVirtualIds?: string[]; // IDs des transactions virtuelles supprimées par l'utilisateur
+  deletedVirtualIds?: string[];
   monthlyBudget: number;
-  cycleEndDay?: number; // 0 ou undefined = fin du mois réel, sinon 1-31
+  cycleEndDay?: number; 
 }
 
 export interface AppState {
-  user: User | null;
+  user: User | null; // Changé de FirebaseUser pour correspondre à ton interface locale
   accounts: BudgetAccount[];
   activeAccountId: string;
   categories: Category[];
