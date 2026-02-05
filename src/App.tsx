@@ -16,7 +16,7 @@ import RecurringManager from './components/RecurringManager';
 import TransactionList from './components/TransactionList';
 import AddTransactionModal from './components/AddTransactionModal';
 import Settings from './components/Settings';
-import AuthScreen from './components/AuthScreen'; // Assure-toi d'avoir créé ce fichier
+import AuthScreen from './components/AuthScreen';
 
 const VIEW_ORDER: ViewType[] = ['DASHBOARD', 'TRANSACTIONS', 'RECURRING', 'SETTINGS'];
 
@@ -37,18 +37,7 @@ const App: React.FC = () => {
 
   const isInitialMount = useRef(true);
 
-  useEffect(() => {
-    window.history.replaceState({ view: 'DASHBOARD' }, '', '#dashboard');
-    const handlePopState = (event: PopStateEvent) => {
-      if (showAddModal) { setShowAddModal(false); setEditingTransaction(null); return; }
-      if (showWelcome) { setShowWelcome(false); return; }
-      if (event.state?.view) setActiveView(event.state.view);
-      else setActiveView('DASHBOARD');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [showAddModal, showWelcome]);
-
+  // Authentification et Récupération Cloud
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -72,6 +61,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Sauvegarde Automatique
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
     saveState(state);
@@ -90,29 +80,7 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  const handleImportData = async (json: any) => {
-    try {
-      if (!json.accounts || !Array.isArray(json.accounts)) throw new Error("Format invalide");
-      const mergedAccountsMap = new Map<string, BudgetAccount>();
-      state.accounts.forEach(acc => mergedAccountsMap.set(acc.id, acc));
-      json.accounts.forEach((importedAcc: BudgetAccount) => {
-        const existingAcc = mergedAccountsMap.get(importedAcc.id);
-        if (existingAcc) {
-          const allTx = [...importedAcc.transactions, ...existingAcc.transactions];
-          const uniqueTx = Array.from(new Map(allTx.map(t => [t.id, t])).values()) as Transaction[];
-          mergedAccountsMap.set(importedAcc.id, { ...importedAcc, transactions: uniqueTx });
-        } else {
-          mergedAccountsMap.set(importedAcc.id, importedAcc);
-        }
-      });
-      const nextAccounts = Array.from(mergedAccountsMap.values());
-      const newState = { ...state, ...json, accounts: nextAccounts };
-      setState(newState);
-      if (fbUser && fbUser.uid !== 'local-user') await saveUserData(fbUser.uid, newState);
-      alert("Importation réussie !");
-    } catch (err) { alert("Erreur : " + (err as Error).message); }
-  };
-
+  // --- LOGIQUE METIER (Calculs) ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
@@ -123,15 +91,19 @@ const App: React.FC = () => {
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
       let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
       while (scanDate <= targetDate) {
-        const m = scanDate.getMonth(); const y = scanDate.getFullYear();
+        const m = scanDate.getMonth();
+        const y = scanDate.getFullYear();
         const paidTemplateIds = new Set(activeAccount.transactions.filter(t => {
-          const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y && t.templateId;
+          const d = new Date(t.date);
+          return d.getMonth() === m && d.getFullYear() === y && t.templateId;
         }).map(t => t.templateId));
         templates.forEach(tpl => {
           if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
           const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
           const vId = `virtual-${tpl.id}-${m}-${y}`;
-          if (new Date(y, m, day) <= targetDate && !deletedIds.has(vId)) balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
+          if (new Date(y, m, day) <= targetDate && !deletedIds.has(vId)) {
+            balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
+          }
         });
         scanDate.setMonth(scanDate.getMonth() + 1);
       }
@@ -145,7 +117,8 @@ const App: React.FC = () => {
   const effectiveTransactions = useMemo(() => {
     if (!activeAccount) return [];
     const realOnes = activeAccount.transactions.filter(t => {
-      const d = new Date(t.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      const d = new Date(t.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
     const paidIds = new Set(realOnes.map(t => t.templateId).filter(Boolean));
     const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
@@ -192,7 +165,6 @@ const App: React.FC = () => {
       const currentIndex = VIEW_ORDER.indexOf(activeView);
       const nextIndex = VIEW_ORDER.indexOf(newView);
       setViewDirection(nextIndex > currentIndex ? 1 : -1);
-      window.history.pushState({ view: newView }, '', `#${newView.toLowerCase()}`);
       setActiveView(newView);
     }
   };
@@ -209,13 +181,10 @@ const App: React.FC = () => {
              <IconLogo className="w-8 h-8" />
             <h1 className="text-xl font-black tracking-tighter italic">ZenBudget</h1>
           </div>
-          <div className="flex items-center gap-3">
-             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-                <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
-                <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
-                <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
-             </div>
-             <button onClick={() => handleViewChange('SETTINGS')} className="p-2 text-slate-400"><IconSettings className="w-5 h-5" /></button>
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+             <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
+             <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
+             <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
           </div>
         </div>
       </header>
@@ -267,9 +236,10 @@ const App: React.FC = () => {
                   });
                 }}
                 onReset={() => { if(confirm("Tout supprimer ?")) { localStorage.removeItem('zenbudget_state_v3'); setState(getInitialState()); setTimeout(() => window.location.reload(), 50); } }}
-                onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} onUpdateBudget={()=>{}} onLogin={loginWithGoogle} onLogout={logout} onShowWelcome={() => setShowWelcome(true)}
+                onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
+                onUpdateBudget={()=>{}} onLogin={loginWithGoogle} onLogout={logout} onShowWelcome={() => setShowWelcome(true)}
                 onBackup={() => { const dataStr = JSON.stringify(state); const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', 'zenbudget_backup.json'); link.click(); }} 
-                onImport={(file) => { const reader = new FileReader(); reader.onload = (e) => { try { handleImportData(JSON.parse(e.target?.result as string)); } catch (err) { alert("Fichier invalide"); } }; reader.readAsText(file); }}
+                onImport={(file) => { const reader = new FileReader(); reader.onload = (e) => { try { setState(JSON.parse(e.target?.result as string)); } catch (err) { alert("Fichier invalide"); } }; reader.readAsText(file); }}
               />
             )}
           </motion.div>
@@ -287,6 +257,7 @@ const App: React.FC = () => {
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
+      {/* POPUP GUIDE ZEN - CONTENU ORIGINAL RÉINTÉGRÉ */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-end justify-center px-4" onClick={() => setShowWelcome(false)}>
@@ -298,18 +269,39 @@ const App: React.FC = () => {
                   <IconLogo className="w-10 h-10 text-indigo-600" />
                 </div>
                 <h2 className="text-2xl font-black text-slate-800 tracking-tight">Guide ZenBudget</h2>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Maîtrisez vos finances</p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Maîtrisez votre budget réel</p>
               </div>
 
               <div className="space-y-6">
                 {[
-                  { step: "01", title: "Comptes & Cycle", desc: "Créez vos comptes dans Réglages et définissez votre jour de paie (ex: le 25). L'app calculera automatiquement vos restes à vivre jusqu'au mois suivant." },
-                  { step: "02", title: "Dépenses Fixes", desc: "Allez dans l'onglet 'Fixes' pour ajouter vos loyers, abonnements et revenus. Ils se projetteront chaque mois sans effort." },
-                  { step: "03", title: "Le Quotidien", desc: "Notez vos dépenses variables dans le 'Journal'. ZenBudget fusionne vos dépenses réelles et vos prévisions pour vous donner votre solde futur exact." },
-                  { step: "04", title: "Synchronisation", desc: `Vos données sont liées à : ${fbUser?.email || 'Mode Local'}. Tout est sauvegardé en temps réel.` }
+                  { 
+                    step: "00", 
+                    title: "Calibrage Initial", 
+                    desc: "Pour démarrer sur de bonnes bases, ajoutez une transaction unique (Revenu) nommée 'Solde Initial' avec votre montant bancaire actuel. C'est votre point de départ Zen pour des calculs précis." 
+                  },
+                  { 
+                    step: "01", 
+                    title: "Comptes & Cycle", 
+                    desc: "Allez dans Réglages pour créer vos comptes et définir votre jour de paie (ex: le 25 du mois). L'app calculera automatiquement vos restes à vivre jusqu'au cycle suivant." 
+                  },
+                  { 
+                    step: "02", 
+                    title: "Dépenses Fixes", 
+                    desc: "Utilisez l'onglet 'Fixes' pour vos loyers, abonnements et revenus récurrents. Ils se projetteront chaque mois sans aucun effort de saisie de votre part." 
+                  },
+                  { 
+                    step: "03", 
+                    title: "Vision Quotidienne", 
+                    desc: "Notez vos dépenses variables dans le 'Journal'. ZenBudget fusionne vos dépenses réelles et vos prévisions pour vous donner votre solde futur exact à l'instant T." 
+                  },
+                  { 
+                    step: "04", 
+                    title: "Synchronisation Cloud", 
+                    desc: `Vos données sont désormais liées en toute sécurité à : ${fbUser?.email || 'Mode Local'}. Vos finances sont sauvegardées en temps réel et accessibles partout.` 
+                  }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-5 items-start p-4 rounded-[24px] bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                    <span className="text-xl font-black text-indigo-200 leading-none pt-1">{item.step}</span>
+                    <span className={`text-xl font-black leading-none pt-1 ${item.step === "00" ? "text-emerald-400" : "text-indigo-200"}`}>{item.step}</span>
                     <div>
                       <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-tight mb-1">{item.title}</h3>
                       <p className="text-[12px] text-slate-500 leading-relaxed font-medium">{item.desc}</p>
