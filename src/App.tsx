@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const isDataReady = useRef(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  // 1. Chargement initial et Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -59,13 +60,17 @@ const App: React.FC = () => {
         setState(getInitialState());
       }
       setAuthLoading(false);
-      setTimeout(() => { isDataReady.current = true; }, 1000);
+      // On attend un peu que l'état soit bien stabilisé avant d'autoriser la sauvegarde auto
+      setTimeout(() => { isDataReady.current = true; }, 1500);
     });
     return () => unsubscribe();
   }, []);
 
+  // 2. Sauvegarde automatique (Déclenchée à chaque changement de 'state')
   useEffect(() => {
+    // CONDITION CRUCIALE : On ne sauvegarde pas si l'auth charge, si on importe, ou si les données ne sont pas prêtes
     if (!isDataReady.current || authLoading || isImporting) return;
+
     saveState(state);
     if (fbUser && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, state);
@@ -82,7 +87,7 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- NOUVELLE LOGIQUE ANTI-DOUBLON PAR EMPREINTE (LIBELLÉ + MONTANT) ---
+  // Logique Anti-Doublon
   const paidMarkers = useMemo(() => {
     if (!activeAccount) return new Set();
     return new Set(
@@ -97,33 +102,25 @@ const App: React.FC = () => {
 
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount || isImporting) return 0;
-    
     const normalizedTarget = new Date(targetDate);
     normalizedTarget.setHours(12, 0, 0, 0);
 
-    // 1. Somme des transactions réelles jusqu'à la date
     let balance = activeAccount.transactions.reduce((acc, t) => {
       const tDate = new Date(t.date);
       tDate.setHours(12, 0, 0, 0); 
       return tDate <= normalizedTarget ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
 
-    // 2. Ajout des prévisions non encore payées (pour le mois cible uniquement)
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
-      
       templates.forEach(tpl => {
         if (!tpl.isActive) return;
-        
-        // On vérifie si une transaction réelle avec le même nom/montant existe
         const marker = `${tpl.comment?.toLowerCase().trim() || ''}-${tpl.amount}`;
         if (paidMarkers.has(marker)) return;
-
         const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
         const vDate = new Date(currentYear, currentMonth, day, 12, 0, 0);
         const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
-        
         if (vDate <= normalizedTarget && !deletedIds.has(vId)) {
           balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
         }
@@ -132,22 +129,16 @@ const App: React.FC = () => {
     return balance;
   };
 
-  // Calculs pour le Dashboard
   const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
-  
-  // Le report est le solde réel à la fin du mois dernier (sans projections)
   const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), false), [activeAccount, currentMonth, currentYear, isImporting]);
 
   const effectiveTransactions = useMemo(() => {
     if (!activeAccount || isImporting) return [];
-    
     const realOnes = activeAccount.transactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
-    
     const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
-    
     const virtuals = (activeAccount.recurringTemplates || [])
       .filter(tpl => {
         const marker = `${tpl.comment?.toLowerCase().trim() || ''}-${tpl.amount}`;
@@ -163,33 +154,43 @@ const App: React.FC = () => {
           isRecurring: true, templateId: tpl.id
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
-      
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
 
-  const handleUpsertTransaction = (t: Omit<Transaction, 'id'> & { id?: string }) => {
-    setState(prev => {
-      const accIndex = prev.accounts.findIndex(a => a.id === prev.activeAccountId);
-      if (accIndex === -1) return prev;
-      const acc = { ...prev.accounts[accIndex] };
-      let nextTx = [...acc.transactions];
-      let nextDeleted = [...(acc.deletedVirtualIds || [])];
-      const targetId = t.id || editingTransaction?.id;
-      
-      if (targetId?.startsWith('virtual-')) {
-        nextDeleted.push(targetId!);
-        nextTx = [{ ...t, id: generateId(), templateId: targetId.split('-')[1] } as Transaction, ...nextTx];
-      } else if (targetId && nextTx.some(i => i.id === targetId)) {
-        nextTx = nextTx.map(i => i.id === targetId ? ({ ...t, id: targetId } as Transaction) : i);
-      } else {
-        nextTx = [{ ...t, id: generateId() } as Transaction, ...nextTx];
-      }
-      
-      const nextAccounts = [...prev.accounts];
-      nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
-      return { ...prev, accounts: nextAccounts };
-    });
-    setShowAddModal(false); setEditingTransaction(null);
+  // AJOUT/MODIFICATION : Forcer la sauvegarde ici aussi pour plus de sécurité
+  const handleUpsertTransaction = async (t: Omit<Transaction, 'id'> & { id?: string }) => {
+    const accIndex = state.accounts.findIndex(a => a.id === state.activeAccountId);
+    if (accIndex === -1) return;
+
+    const acc = { ...state.accounts[accIndex] };
+    let nextTx = [...acc.transactions];
+    let nextDeleted = [...(acc.deletedVirtualIds || [])];
+    const targetId = t.id || editingTransaction?.id;
+    
+    if (targetId?.startsWith('virtual-')) {
+      nextDeleted.push(targetId!);
+      nextTx = [{ ...t, id: generateId(), templateId: targetId.split('-')[1] } as Transaction, ...nextTx];
+    } else if (targetId && nextTx.some(i => i.id === targetId)) {
+      nextTx = nextTx.map(i => i.id === targetId ? ({ ...t, id: targetId } as Transaction) : i);
+    } else {
+      nextTx = [{ ...t, id: generateId() } as Transaction, ...nextTx];
+    }
+    
+    const nextAccounts = [...state.accounts];
+    nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
+    
+    const newState = { ...state, accounts: nextAccounts };
+    
+    // Mise à jour de l'UI
+    setState(newState);
+    setShowAddModal(false); 
+    setEditingTransaction(null);
+
+    // SAUVEGARDE FORCEE IMMEDIATE
+    saveState(newState);
+    if (fbUser && fbUser.uid !== 'local-user') {
+      await saveUserData(fbUser.uid, newState);
+    }
   };
 
   const handleViewChange = (newView: ViewType) => {
