@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppState, ViewType, Transaction } from './types';
+import { AppState, ViewType, Transaction, BudgetAccount } from './types';
 import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
@@ -8,7 +8,7 @@ import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './comp
 import { auth, loginWithGoogle, logout } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
-// Framer Motion (si utilisé pour les transitions)
+// Framer Motion
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Dashboard from './components/Dashboard';
@@ -37,7 +37,7 @@ const App: React.FC = () => {
 
   const isInitialMount = useRef(true);
 
-  // --- GESTION DE L'AUTHENTIFICATION ET SYNC CLOUD ---
+  // Authentification et Récupération Cloud
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -61,7 +61,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- SAUVEGARDE AUTO (Local + Cloud) ---
+  // Sauvegarde Automatique
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
     saveState(state);
@@ -70,7 +70,6 @@ const App: React.FC = () => {
     }
   }, [state, fbUser]);
 
-  // --- LOGIQUE METIER & CALCULS ---
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
   }, [state.accounts, state.activeAccountId]);
@@ -81,12 +80,12 @@ const App: React.FC = () => {
     return d;
   }, []);
 
+  // --- LOGIQUE METIER (Calculs) ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
       return new Date(t.date) <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
-
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
@@ -141,6 +140,7 @@ const App: React.FC = () => {
   const handleUpsertTransaction = (t: Omit<Transaction, 'id'> & { id?: string }) => {
     setState(prev => {
       const accIndex = prev.accounts.findIndex(a => a.id === prev.activeAccountId);
+      if (accIndex === -1) return prev;
       const acc = { ...prev.accounts[accIndex] };
       let nextTx = [...acc.transactions];
       let nextDeleted = [...(acc.deletedVirtualIds || [])];
@@ -157,17 +157,19 @@ const App: React.FC = () => {
       nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
       return { ...prev, accounts: nextAccounts };
     });
-    setShowAddModal(false);
+    setShowAddModal(false); setEditingTransaction(null);
   };
 
-  const navigateTo = (view: ViewType) => {
-    const currentIndex = VIEW_ORDER.indexOf(activeView);
-    const nextIndex = VIEW_ORDER.indexOf(view);
-    setViewDirection(nextIndex > currentIndex ? 1 : -1);
-    setActiveView(view);
+  const handleViewChange = (newView: ViewType) => {
+    if (newView !== activeView) {
+      const currentIndex = VIEW_ORDER.indexOf(activeView);
+      const nextIndex = VIEW_ORDER.indexOf(newView);
+      setViewDirection(nextIndex > currentIndex ? 1 : -1);
+      setActiveView(newView);
+    }
   };
 
-  if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#F8F9FD] italic font-black text-indigo-600">ZenBudget...</div>;
+  if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#F8F9FD]"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   if (!fbUser) return <AuthScreen onLocalMode={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} />;
 
@@ -176,13 +178,13 @@ const App: React.FC = () => {
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <IconLogo className="w-8 h-8 text-indigo-600" />
+             <IconLogo className="w-8 h-8" />
             <h1 className="text-xl font-black tracking-tighter italic">ZenBudget</h1>
           </div>
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-             <button onClick={() => { let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
+             <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
              <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
-             <button onClick={() => { let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
+             <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
           </div>
         </div>
       </header>
@@ -200,8 +202,8 @@ const App: React.FC = () => {
               <Dashboard 
                 transactions={effectiveTransactions} categories={state.categories} activeAccount={activeAccount} allAccounts={state.accounts}
                 onSwitchAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))} month={currentMonth} year={currentYear}
-                onViewTransactions={() => navigateTo('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
-                availableBalance={getBalanceAtDate(new Date(now.getFullYear(), now.getMonth()+1, 0), true)} projectedBalance={projectedBalance} carryOver={carryOver}
+                onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
+                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 28), true)} projectedBalance={projectedBalance} carryOver={carryOver}
               />
             )}
             {activeView === 'TRANSACTIONS' && (
@@ -211,7 +213,7 @@ const App: React.FC = () => {
                 onEdit={(t) => { setEditingTransaction(t); setShowAddModal(true); }}
                 onAddAtDate={(date) => { setModalInitialDate(date); setShowAddModal(true); }}
                 selectedDay={selectedDay} onSelectDay={setSelectedDay} totalBalance={projectedBalance} carryOver={carryOver} cycleEndDay={activeAccount?.cycleEndDay || 0}
-                onMonthChange={() => {}} 
+                onMonthChange={() => {}} slideDirection={slideDirection}
               />
             )}
             {activeView === 'RECURRING' && (
@@ -223,70 +225,94 @@ const App: React.FC = () => {
             )}
             {activeView === 'SETTINGS' && (
               <Settings 
-                state={state} 
+                state={state} user={fbUser}
                 onUpdateAccounts={(accs) => setState(prev => ({ ...prev, accounts: accs }))}
                 onSetActiveAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))}
                 onDeleteAccount={(id) => {
                   setState(prev => {
                     const nextAccounts = prev.accounts.filter(a => a.id !== id);
-                    const nextActive = prev.activeAccountId === id ? nextAccounts[0].id : prev.activeAccountId;
-                    return { ...prev, accounts: nextAccounts, activeAccountId: nextActive };
+                    if (nextAccounts.length === 0) return prev;
+                    return { ...prev, accounts: nextAccounts, activeAccountId: prev.activeAccountId === id ? nextAccounts[0].id : prev.activeAccountId };
                   });
                 }}
-                onReset={() => { if(confirm("Tout supprimer ?")) { setState(getInitialState()); } }}
-                onUpdateCategories={()=>{}} onUpdateBudget={()=>{}} onLogout={logout} 
-                onShowWelcome={() => setShowWelcome(true)}
-                onBackup={() => { /* Logique backup JSON */ }} 
-                onImport={(file) => { /* Logique import JSON */ }}
+                onReset={() => { if(confirm("Tout supprimer ?")) { localStorage.removeItem('zenbudget_state_v3'); setState(getInitialState()); setTimeout(() => window.location.reload(), 50); } }}
+                onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
+                onUpdateBudget={()=>{}} onLogin={loginWithGoogle} onLogout={logout} onShowWelcome={() => setShowWelcome(true)}
+                onBackup={() => { const dataStr = JSON.stringify(state); const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', 'zenbudget_backup.json'); link.click(); }} 
+                onImport={(file) => { const reader = new FileReader(); reader.onload = (e) => { try { setState(JSON.parse(e.target?.result as string)); } catch (err) { alert("Fichier invalide"); } }; reader.readAsText(file); }}
               />
             )}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
+      <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center pt-2 pb-8 px-6 z-40">
-        <NavBtn active={activeView === 'DASHBOARD'} onClick={() => navigateTo('DASHBOARD')} icon={<IconHome />} label="Stats" />
-        <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => navigateTo('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" />
-        <NavBtn active={activeView === 'RECURRING'} onClick={() => navigateTo('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" />
-        <NavBtn active={activeView === 'SETTINGS'} onClick={() => navigateTo('SETTINGS')} icon={<IconSettings />} label="Réglages" />
+        <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Stats" />
+        <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" />
+        <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" />
+        <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Réglages" />
       </nav>
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
-      {/* --- LE GUIDE ZEN MIS À JOUR (BASÉ SUR TON ANCIEN FICHIER + AJOUTS) --- */}
+      {/* POPUP GUIDE ZEN - CONTENU REPRIS DE TA VERSION PRÉCÉDENTE */}
       <AnimatePresence>
         {showWelcome && (
-          <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
-            <div className="bg-white rounded-[40px] max-w-md w-full p-8 shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
-              <div className="flex justify-center text-4xl">🌿</div>
-              <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight">Guide Zen</h2>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-end justify-center px-4" onClick={() => setShowWelcome(false)}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[40px] p-8 pb-12 shadow-2xl max-h-[85vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
+              <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-8" />
               
-              <div className="space-y-4 text-slate-600">
-                <div className="flex gap-3">
-                  <span className="font-black text-emerald-500">0.</span>
-                  <p className="text-sm font-medium"><b>Calibrage :</b> Ajoutez votre solde bancaire actuel comme un <b>Revenu</b> nommé "Solde Initial" dans le Journal pour partir sur des bases correctes.</p>
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-indigo-50 rounded-[24px] flex items-center justify-center mx-auto mb-4">
+                  <IconLogo className="w-10 h-10 text-indigo-600" />
                 </div>
-                <div className="flex gap-3">
-                  <span className="font-black text-indigo-600">1.</span>
-                  <p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b> pour automatiser vos prévisions.</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="font-black text-indigo-600">2.</span>
-                  <p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement après déduction de vos factures à venir.</p>
-                </div>
-                <div className="flex gap-3">
-                  <span className="font-black text-indigo-600">3.</span>
-                  <p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email}</b>. Tout changement est sauvegardé instantanément dans le cloud.</p>
-                </div>
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight italic">Guide Zen</h2>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Maîtrisez votre budget réel</p>
               </div>
 
-              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all mt-4">
-                C'est parti !
+              <div className="space-y-6">
+                {[
+                  { 
+                    step: "0.", 
+                    title: "Calibrage Initial", 
+                    desc: "Ajoutez votre solde bancaire actuel comme un Revenu ponctuel aujourd'hui dans le Journal. C'est votre point de départ pour des calculs précis." 
+                  },
+                  { 
+                    step: "1.", 
+                    title: "Flux Fixes", 
+                    desc: "Configurez vos flux fixes (loyer, abonnements...) dans l'onglet 'Fixes'. Ils se projetteront automatiquement chaque mois." 
+                  },
+                  { 
+                    step: "2.", 
+                    title: "Disponible Réel", 
+                    desc: "Vérifiez votre 'Disponible Réel' : c'est l'argent que vous pouvez dépenser sereinement après avoir pris en compte vos charges à venir." 
+                  },
+                  { 
+                    step: "3.", 
+                    title: "Sauvegarde & Synchro", 
+                    desc: `Vos données sont liées à ${fbUser?.email || 'votre compte'}. Utilisez l'Export Backup (Réglages) pour une sécurité supplémentaire.` 
+                  }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-5 items-start p-4 rounded-[24px] bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                    <span className="text-xl font-black leading-none pt-1 text-indigo-600">{item.step}</span>
+                    <div>
+                      <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-tight mb-1">{item.title}</h3>
+                      <p className="text-[12px] text-slate-500 leading-relaxed font-medium">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setShowWelcome(false)} 
+                className="w-full mt-10 py-5 bg-slate-900 text-white font-black rounded-[20px] uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all"
+              >
+                C'est parti ! ✨
               </button>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -294,7 +320,7 @@ const App: React.FC = () => {
 };
 
 const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-colors ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
     <div className="w-5 h-5">{icon}</div>
     <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
   </button>
