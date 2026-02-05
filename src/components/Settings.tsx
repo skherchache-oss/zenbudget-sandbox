@@ -130,10 +130,9 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
-      {/* SECTION PROFIL / AUTH CORRIGÉE */}
+      {/* SECTION PROFIL / AUTH */}
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
-          {/* Avatar avec bouton edit */}
           <div className="relative">
             <div className="w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl">
               {user?.photoURL ? (
@@ -301,7 +300,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}  
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
-            Signaler un bug ✨ 
+            Signaler un bug ou une idée ✨ 
           </button> 
         </div> 
 
