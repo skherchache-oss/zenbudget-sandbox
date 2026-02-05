@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AppState, ViewType, Transaction, Category, BudgetAccount, RecurringTemplate, User } from './types';
+import { AppState, ViewType, Transaction, Category, BudgetAccount, RecurringTemplate, User } from './src/types';
 import { getInitialState, saveState, generateId } from './src/store';
-import { MONTHS_FR } from './constants';
-import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
+import { MONTHS_FR } from './src/constants';
+import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './src/components/Icons';
 
 import Dashboard from './components/Dashboard';
 import RecurringManager from './components/RecurringManager';
