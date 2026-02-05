@@ -35,8 +35,9 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
 
-  // RÉGULATEUR ANTI-DOUBLONS
+  // RÉGULATEURS ANTI-DOUBLONS & IMPORT
   const isDataReady = useRef(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Authentification et Récupération Cloud
   useEffect(() => {
@@ -67,13 +68,13 @@ const App: React.FC = () => {
 
   // Sauvegarde Automatique
   useEffect(() => {
-    if (!isDataReady.current || authLoading) return;
+    if (!isDataReady.current || authLoading || isImporting) return;
 
     saveState(state);
     if (fbUser && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, state);
     }
-  }, [state, fbUser, authLoading]);
+  }, [state, fbUser, authLoading, isImporting]);
 
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
@@ -85,23 +86,34 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE CALCULS ---
+  // --- LOGIQUE CALCULS (Renforcée contre les erreurs d'import) ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
-    if (!activeAccount) return 0;
+    if (!activeAccount || isImporting) return 0;
+    
+    // 1. Solde réel basé sur les transactions physiques
     let balance = activeAccount.transactions.reduce((acc, t) => {
       return new Date(t.date) <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
+
+    // 2. Ajout des projections (Seulement si nécessaire)
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
       let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      
       while (scanDate <= targetDate) {
         const m = scanDate.getMonth();
         const y = scanDate.getFullYear();
-        const paidTemplateIds = new Set(activeAccount.transactions.filter(t => {
-          const d = new Date(t.date);
-          return d.getMonth() === m && d.getFullYear() === y && t.templateId;
-        }).map(t => t.templateId));
+        
+        // On vérifie quelles transactions réelles sont liées à un template pour ce mois précis
+        const paidTemplateIds = new Set(activeAccount.transactions
+          .filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === m && d.getFullYear() === y && t.templateId;
+          })
+          .map(t => t.templateId)
+        );
+
         templates.forEach(tpl => {
           if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
           const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
@@ -116,11 +128,11 @@ const App: React.FC = () => {
     return balance;
   };
 
-  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear]);
-  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), true), [activeAccount, currentMonth, currentYear]);
+  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear, isImporting]);
+  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), true), [activeAccount, currentMonth, currentYear, isImporting]);
 
   const effectiveTransactions = useMemo(() => {
-    if (!activeAccount) return [];
+    if (!activeAccount || isImporting) return [];
     const realOnes = activeAccount.transactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -140,7 +152,7 @@ const App: React.FC = () => {
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [activeAccount, currentMonth, currentYear]);
+  }, [activeAccount, currentMonth, currentYear, isImporting]);
 
   const handleUpsertTransaction = (t: Omit<Transaction, 'id'> & { id?: string }) => {
     setState(prev => {
@@ -184,7 +196,7 @@ const App: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
              <IconLogo className="w-8 h-8" />
-            <h1 className="text-xl font-black tracking-tighter italic">ZenBudget</h1>
+            <h1 className="text-xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
           </div>
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
              <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
@@ -253,7 +265,26 @@ const App: React.FC = () => {
                 onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
                 onUpdateBudget={()=>{}} onLogin={loginWithGoogle} onLogout={logout} onShowWelcome={() => setShowWelcome(true)}
                 onBackup={() => { const dataStr = JSON.stringify(state); const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', 'zenbudget_backup.json'); link.click(); }} 
-                onImport={(file) => { const reader = new FileReader(); reader.onload = (e) => { try { setState(JSON.parse(e.target?.result as string)); } catch (err) { alert("Fichier invalide"); } }; reader.readAsText(file); }}
+                onImport={(file) => { 
+                  const reader = new FileReader(); 
+                  reader.onload = async (e) => { 
+                    try { 
+                      const imported = JSON.parse(e.target?.result as string);
+                      setIsImporting(true);
+                      isDataReady.current = false;
+                      
+                      // On force le state importé mais on garde l'ID utilisateur actuel
+                      const finalState = { ...imported, user: state.user };
+                      setState(finalState);
+                      
+                      if (fbUser) await saveUserData(fbUser.uid, finalState);
+                      
+                      alert("Import réussi ! Redémarrage...");
+                      window.location.reload();
+                    } catch (err) { alert("Fichier invalide"); } 
+                  }; 
+                  reader.readAsText(file); 
+                }}
               />
             )}
           </motion.div>
@@ -279,21 +310,14 @@ const App: React.FC = () => {
               <div className="flex justify-center text-4xl">🌿</div>
               <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight">Guide Zen</h2>
               <div className="space-y-4 text-slate-600">
-                {/* PARTIE 0 - ENCADRÉ BLEU */}
                 <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 flex gap-3">
                   <span className="font-black text-indigo-600">0.</span>
-                  <p className="text-xs font-bold text-indigo-900 leading-relaxed">
-                    À la 1ère utilisation : ajoutez votre <b className="text-indigo-600">solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.
-                  </p>
+                  <p className="text-xs font-bold text-indigo-900 leading-relaxed">À la 1ère utilisation : ajoutez votre <b className="text-indigo-600">solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.</p>
                 </div>
-                
                 <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b>. Ils seront automatiquement intégrés les mois suivants.</p></div>
-                
                 <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement.</p></div>
-                
                 <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegardes</b> : Utilisez l'<b>Export Backup</b> (Réglages) pour restaurer votre budget en cas de réinitialisation. L'<b>Export CSV</b> sert à la lecture sur Excel.</p></div>
-                
-                <div className="flex gap-3 px-1"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b> et sauvegardées en temps réel.</p></div>
+                <div className="flex gap-3 px-1"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b>.</p></div>
               </div>
               <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all mt-4">C'est parti !</button>
             </motion.div>
