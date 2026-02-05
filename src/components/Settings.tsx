@@ -1,17 +1,19 @@
 import React, { useState, useRef } from 'react'; 
-import { AppState, BudgetAccount, Category, User } from '../types'; 
+import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
+import { User as FirebaseUser } from 'firebase/auth'; // Import du type Firebase
 
 interface SettingsProps { 
   state: AppState; 
+  user: FirebaseUser | null; // Ajout de la prop user
   onUpdateAccounts: (accounts: BudgetAccount[]) => void; 
   onSetActiveAccount: (id: string) => void; 
   onDeleteAccount: (id: string) => void; 
   onReset: () => void; 
   onUpdateCategories: (cats: Category[]) => void; 
   onUpdateBudget: (val: number) => void; 
-  onLogin: () => void; // Adapté pour déclencher loginWithGoogle de App.tsx
+  onLogin: () => void; 
   onLogout: () => void; 
   onShowWelcome: () => void; 
   onBackup: () => void;
@@ -70,7 +72,7 @@ const AccountItem: React.FC<{
   ); 
 }; 
 
-const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout }) => { 
+const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout }) => { 
   const [isAddingAccount, setIsAddingAccount] = useState(false); 
   const [newAccName, setNewAccName] = useState(''); 
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
@@ -89,7 +91,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
 
   const handleCreateAccount = () => { 
     if (!newAccName.trim()) return; 
-    const newAcc = createDefaultAccount(state.user?.id || 'local-user'); 
+    const newAcc = createDefaultAccount(user?.uid || 'local-user'); 
     newAcc.name = newAccName.trim(); 
     onUpdateAccounts([...state.accounts, newAcc]); 
     onSetActiveAccount(newAcc.id); 
@@ -122,40 +124,42 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
     }
   };
 
+  const isRealUser = user && user.uid !== 'local-user';
+
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
-      {/* SECTION PROFIL / AUTH */}
+      {/* SECTION PROFIL / AUTH CORRIGÉE */}
       <section className="bg-white p-5 rounded-[32px] border border-slate-50 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner">
-              {state.user?.photoURL ? (
-                <img src={state.user.photoURL} alt="Profil" className="w-full h-full object-cover" />
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="Profil" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xl font-black text-indigo-600 uppercase">
-                  {state.user?.name?.charAt(0) || 'Z'}
+                  {user?.displayName?.charAt(0) || 'Z'}
                 </span>
               )}
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <h3 className="font-black text-slate-800 text-[14px] leading-tight">
-                  {state.user ? state.user.name : 'Utilisateur Invité'}
+                <h3 className="font-black text-slate-800 text-[14px] leading-tight truncate max-w-[120px]">
+                  {user?.displayName || 'Utilisateur Invité'}
                 </h3>
-                <div className={`w-1.5 h-1.5 rounded-full ${state.user ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
               </div>
-              <p className="text-[10px] font-medium text-slate-400">
-                {state.user ? state.user.email : 'Données stockées localement'}
+              <p className="text-[10px] font-medium text-slate-400 truncate max-w-[150px]">
+                {user?.email || 'Données stockées localement'}
               </p>
             </div>
           </div>
           
           <button 
-            onClick={() => state.user ? onLogout() : onLogin()}
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!state.user ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 border border-slate-100'}`}
+            onClick={() => isRealUser ? onLogout() : onLogin()}
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-400 border border-slate-100'}`}
           >
-            {state.user ? 'Déconnexion' : 'Connexion'}
+            {isRealUser ? 'Déconnexion' : 'Connexion'}
           </button>
         </div>
       </section>
@@ -280,7 +284,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
           <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
             Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
           </p> 
-          <button  
+          <button   
             onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}  
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
@@ -288,8 +292,8 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
           </button> 
         </div> 
 
-        <button  
-          onClick={onReset}  
+        <button   
+          onClick={onReset}   
           className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
         > 
           Réinitialiser les données 

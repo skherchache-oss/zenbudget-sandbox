@@ -53,12 +53,18 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // L'utilisateur est connecté, on récupère ses données Cloud
         const cloudData = await fetchUserData(firebaseUser);
-        setState(cloudData);
+        // On injecte les infos Google dans le state pour l'affichage
+        setState({
+          ...cloudData,
+          user: {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Utilisateur Google',
+            email: firebaseUser.email || ''
+          }
+        });
         setFbUser(firebaseUser);
       } else {
-        // L'utilisateur est déconnecté, on revient à l'état local
         setFbUser(null);
         setState(getInitialState());
       }
@@ -70,12 +76,8 @@ const App: React.FC = () => {
   // Sauvegarde automatique (Locale + Cloud)
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
-    
-    // 1. Toujours sauvegarder en local pour la rapidité
     saveState(state);
-    
-    // 2. Sauvegarder sur Firebase si connecté et si ce n'est pas l'ID local
-    if (fbUser && state.user && state.user.id !== 'local-user') {
+    if (fbUser && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, state);
     }
   }, [state, fbUser]);
@@ -90,7 +92,6 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // Calcul du solde à une date précise (incluant projections)
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
@@ -100,7 +101,6 @@ const App: React.FC = () => {
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
-      // On scanne les 6 derniers mois pour les récurrences manquées
       let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
       
       while (scanDate <= targetDate) {
@@ -199,6 +199,7 @@ const App: React.FC = () => {
     );
   }
 
+  // Écran de Login
   if (!fbUser) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FD] px-6 text-center">
@@ -283,6 +284,7 @@ const App: React.FC = () => {
             {activeView === 'SETTINGS' && (
               <Settings 
                 state={state} 
+                user={fbUser} // <--- AJOUT CRUCIAL : On passe l'utilisateur Firebase ici
                 onUpdateAccounts={(accs) => setState(prev => ({ ...prev, accounts: accs }))}
                 onSetActiveAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))}
                 onDeleteAccount={(id) => {
@@ -359,7 +361,7 @@ const App: React.FC = () => {
               <h2 className="text-xl font-black mb-4 text-center text-slate-800">ZenBudget Guide</h2>
               <p className="text-sm text-slate-500 text-center mb-8 leading-relaxed">
                 Vos données sont synchronisées avec : <br/>
-                <span className="font-bold text-indigo-600">{state.user?.email || 'Mode Local'}</span>
+                <span className="font-bold text-indigo-600">{fbUser?.email || 'Mode Local'}</span>
               </p>
               <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">C'est compris</button>
             </motion.div>
