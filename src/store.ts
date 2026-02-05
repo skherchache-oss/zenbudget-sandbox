@@ -1,4 +1,4 @@
-import { AppState, BudgetAccount, Category, User } from './types';
+import { AppState, BudgetAccount, Category, User, Transaction } from './types';
 import { DEFAULT_CATEGORIES } from './constants';
 import { db } from './firebase'; 
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -41,10 +41,10 @@ export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAcco
 
 /**
  * LOGIQUE DE MIGRATION & FUSION
- * Nettoie les données pour éviter les crashs si des champs sont manquants
+ * Nettoie les données pour éviter les crashs et élimine les doublons
  */
 const migrateData = (parsed: any, defaultState: AppState): AppState => {
-  // 1. Fusion des catégories
+  // 1. Fusion des catégories (sans doublons)
   const savedCategories: Category[] = parsed.categories || [];
   const mergedCategories = [...DEFAULT_CATEGORIES];
   savedCategories.forEach(sc => {
@@ -53,18 +53,29 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     }
   });
 
-  // 2. Nettoyage et complétion des comptes
+  // 2. Nettoyage et fusion des comptes
   const rawAccounts = Array.isArray(parsed.accounts) ? parsed.accounts : defaultState.accounts;
-  const accounts = rawAccounts.map((acc: any) => ({
-    ...acc,
-    transactions: acc.transactions || [],
-    recurringTemplates: acc.recurringTemplates || [],
-    deletedVirtualIds: acc.deletedVirtualIds || [],
-    recurringSyncLog: acc.recurringSyncLog || [],
-    cycleEndDay: acc.cycleEndDay ?? 28,
-    color: acc.color || '#4F46E5',
-    name: acc.name || 'Sans titre'
-  }));
+  const accounts = rawAccounts.map((acc: any) => {
+    // --- PROTECTION ANTI-DOUBLONS TRANSACTIONS ---
+    const rawTransactions: Transaction[] = acc.transactions || [];
+    // On utilise une Map pour garantir que chaque ID de transaction est unique
+    const uniqueTxMap = new Map();
+    rawTransactions.forEach(tx => {
+      if (tx.id) uniqueTxMap.set(tx.id, tx);
+    });
+    const cleanedTransactions = Array.from(uniqueTxMap.values());
+
+    return {
+      ...acc,
+      transactions: cleanedTransactions,
+      recurringTemplates: acc.recurringTemplates || [],
+      deletedVirtualIds: acc.deletedVirtualIds || [],
+      recurringSyncLog: acc.recurringSyncLog || [],
+      cycleEndDay: acc.cycleEndDay ?? 28,
+      color: acc.color || '#4F46E5',
+      name: acc.name || 'Sans titre'
+    };
+  });
 
   // 3. Reconstruction de l'état final
   return { 
@@ -76,7 +87,7 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     tasks: parsed.tasks || [],
     activeAccountId: accounts.find((a: any) => a.id === parsed.activeAccountId) 
       ? parsed.activeAccountId 
-      : accounts[0].id
+      : (accounts[0]?.id || defaultState.activeAccountId)
   };
 };
 
@@ -115,7 +126,6 @@ export const getInitialState = (): AppState => {
 export const saveState = (state: AppState) => {
   if (!isStorageAvailable()) return;
   try {
-    // On ne sauvegarde pas l'état de vue ou de chargement pour éviter les bugs au reload
     const { activeView, ...stateToSave } = state;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
   } catch (e) {
@@ -127,9 +137,6 @@ export const saveState = (state: AppState) => {
  * --- FONCTIONS CLOUD FIRESTORE ---
  */
 
-/**
- * Récupère ou Initialise les données Cloud
- */
 export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null, photoURL?: string | null }): Promise<AppState> => {
   const userDocRef = doc(db, 'users', firebaseUser.uid);
   
@@ -153,13 +160,9 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
   try {
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-      // Fusion Cloud -> Local
       return migrateData(docSnap.data(), defaultState);
     } else {
-      // Premier login : on récupère l'existant local pour ne pas perdre les données saisies avant login
       const localState = getInitialState();
-      
-      // On met à jour l'ID du propriétaire des comptes locaux vers l'ID Firebase
       const migratedAccounts = localState.accounts.map(acc => ({
         ...acc,
         ownerId: firebaseUser.uid
@@ -180,14 +183,10 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
   }
 };
 
-/**
- * Sauvegarde sur Firebase
- */
 export const saveUserData = async (userId: string, state: AppState) => {
   if (!userId || userId === 'local-user') return;
   try {
     const userDocRef = doc(db, 'users', userId);
-    // On retire l'activeView avant l'upload pour garder la propreté des données
     const { activeView, ...cloudData } = state;
     await setDoc(userDocRef, cloudData);
   } catch (error) {
