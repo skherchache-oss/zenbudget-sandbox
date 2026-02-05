@@ -68,7 +68,7 @@ const App: React.FC = () => {
 
   // 2. Sauvegarde automatique (Déclenchée à chaque changement de 'state')
   useEffect(() => {
-    // CONDITION CRUCIALE : On ne sauvegarde pas si l'auth charge, si on importe, ou si les données ne sont pas prêtes
+    // CONDITION : On ne sauvegarde pas si l'auth charge, si on importe, ou si les données ne sont pas prêtes
     if (!isDataReady.current || authLoading || isImporting) return;
 
     saveState(state);
@@ -157,8 +157,10 @@ const App: React.FC = () => {
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
 
-  // AJOUT/MODIFICATION : Forcer la sauvegarde ici aussi pour plus de sécurité
+  // FONCTION CORRIGÉE : Sauvegarde Cloud forcée et attendue
   const handleUpsertTransaction = async (t: Omit<Transaction, 'id'> & { id?: string }) => {
+    console.log("🚀 Tentative d'ajout d'opération...");
+    
     const accIndex = state.accounts.findIndex(a => a.id === state.activeAccountId);
     if (accIndex === -1) return;
 
@@ -181,15 +183,24 @@ const App: React.FC = () => {
     
     const newState = { ...state, accounts: nextAccounts };
     
-    // Mise à jour de l'UI
-    setState(newState);
-    setShowAddModal(false); 
-    setEditingTransaction(null);
+    try {
+      // 1. Mise à jour immédiate de l'interface
+      setState(newState);
+      setShowAddModal(false); 
+      setEditingTransaction(null);
 
-    // SAUVEGARDE FORCEE IMMEDIATE
-    saveState(newState);
-    if (fbUser && fbUser.uid !== 'local-user') {
-      await saveUserData(fbUser.uid, newState);
+      // 2. Sauvegarde Locale
+      saveState(newState);
+
+      // 3. Sauvegarde Cloud avec attente (AWAIT)
+      if (fbUser && fbUser.uid !== 'local-user') {
+        console.log("☁️ Synchronisation Cloud en cours...");
+        await saveUserData(fbUser.uid, newState);
+        console.log("✅ Sauvegarde réussie sur Firebase !");
+      }
+    } catch (error) {
+      console.error("❌ Erreur lors de la sauvegarde :", error);
+      alert("Problème de connexion : l'opération n'a peut-être pas été sauvegardée sur le cloud.");
     }
   };
 
