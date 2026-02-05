@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppState, ViewType, Transaction, Category, BudgetAccount, RecurringTemplate, User } from './types';
-import { getInitialState, saveState, generateId } from './store';
+import { getInitialState, saveState, generateId } from './src/store';
 import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
 
