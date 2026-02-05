@@ -35,40 +35,48 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
 
-  const isInitialMount = useRef(true);
+  // RÉGULATEUR ANTI-DOUBLONS : Empêche la sauvegarde automatique pendant le chargement initial
+  const syncLock = useRef(true);
 
   // Authentification et Récupération Cloud
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      syncLock.current = true; // On verrouille
       if (firebaseUser) {
         const cloudData = await fetchUserData(firebaseUser);
-        setState({
-          ...cloudData,
-          user: {
-            id: firebaseUser.uid,
-            name: firebaseUser.displayName || 'Utilisateur',
-            email: firebaseUser.email || '',
-            photoURL: firebaseUser.photoURL || undefined
-          }
-        });
+        if (cloudData) {
+          setState({
+            ...cloudData,
+            user: {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'Utilisateur',
+              email: firebaseUser.email || '',
+              photoURL: firebaseUser.photoURL || undefined
+            }
+          });
+        }
         setFbUser(firebaseUser);
       } else {
         setFbUser(null);
         setState(getInitialState());
       }
       setAuthLoading(false);
+      // On libère la synchro après un court délai pour laisser l'état se stabiliser
+      setTimeout(() => { syncLock.current = false; }, 800);
     });
     return () => unsubscribe();
   }, []);
 
-  // Sauvegarde Automatique
+  // Sauvegarde Automatique (Corrigée pour éviter les doublons au démarrage)
   useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return; }
+    // Si on charge ou si le verrou est actif, on ne touche à rien
+    if (authLoading || syncLock.current) return;
+
     saveState(state);
     if (fbUser && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, state);
     }
-  }, [state, fbUser]);
+  }, [state, fbUser, authLoading]);
 
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
@@ -257,31 +265,19 @@ const App: React.FC = () => {
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
-      {/* --- GUIDE ZEN FUSIONNÉ --- */}
+      {/* GUIDE ZEN 🌿 */}
       <AnimatePresence>
         {showWelcome && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-6" 
-            onClick={() => setShowWelcome(false)}
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] max-w-md w-full p-8 shadow-2xl space-y-6" 
-              onClick={e => e.stopPropagation()}
-            >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[40px] max-w-md w-full p-8 shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
               <div className="flex justify-center text-4xl">🌿</div>
               <h2 className="text-2xl font-black text-center italic text-slate-800">Guide Zen</h2>
               <div className="space-y-4 text-slate-600">
                 <div className="flex gap-3"><span className="font-black text-indigo-600">0.</span><p className="text-sm font-medium">Ajoutez votre <b>solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.</p></div>
                 <div className="flex gap-3"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b>.</p></div>
                 <div className="flex gap-3"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement.</p></div>
-                <div className="flex gap-3"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegarde vs CSV</b> : Utilisez l'<b>Export Backup</b> (Réglages) pour pouvoir restaurer votre budget. L'<b>Export CSV</b> est une simple lecture pour Excel.</p></div>
-                <div className="flex gap-3"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b> et sauvegardées en temps réel.</p></div>
+                <div className="flex gap-3"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegarde vs CSV</b> : Utilisez l'<b>Export Backup</b> pour restaurer votre budget. Le CSV est pour Excel.</p></div>
+                <div className="flex gap-3"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b>.</p></div>
               </div>
               <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">C'est parti !</button>
             </motion.div>
