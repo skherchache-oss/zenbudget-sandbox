@@ -36,15 +36,14 @@ const App: React.FC = () => {
   const [viewDirection, setViewDirection] = useState(0);
 
   // RÉGULATEUR ANTI-DOUBLONS
-  const syncLock = useRef(true);
+  const isDataReady = useRef(false);
 
   // Authentification et Récupération Cloud
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      syncLock.current = true; 
       if (firebaseUser) {
         const cloudData = await fetchUserData(firebaseUser);
-        if (cloudData) {
+        if (cloudData && cloudData.accounts) {
           setState({
             ...cloudData,
             user: {
@@ -61,14 +60,14 @@ const App: React.FC = () => {
         setState(getInitialState());
       }
       setAuthLoading(false);
-      setTimeout(() => { syncLock.current = false; }, 800);
+      setTimeout(() => { isDataReady.current = true; }, 1000);
     });
     return () => unsubscribe();
   }, []);
 
   // Sauvegarde Automatique
   useEffect(() => {
-    if (authLoading || syncLock.current) return;
+    if (!isDataReady.current || authLoading) return;
 
     saveState(state);
     if (fbUser && fbUser.uid !== 'local-user') {
@@ -242,9 +241,9 @@ const App: React.FC = () => {
                   });
                 }}
                 onReset={async () => { 
-                  if(confirm("Tout supprimer définitivement ?")) { 
+                  if(confirm("Tout supprimer ?")) { 
+                    isDataReady.current = false;
                     const freshState = getInitialState();
-                    // FORCE LA SAUVEGARDE AVANT LE RELOAD
                     localStorage.removeItem('zenbudget_state_v3');
                     if (fbUser) await saveUserData(fbUser.uid, freshState);
                     setState(freshState);
@@ -272,7 +271,7 @@ const App: React.FC = () => {
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
-      {/* LE GUIDE ZEN AVEC SA PETITE FEUILLE VERTE 🌿 */}
+      {/* GUIDE ZEN MIS À JOUR 🌿 */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
@@ -280,11 +279,21 @@ const App: React.FC = () => {
               <div className="flex justify-center text-4xl">🌿</div>
               <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight">Guide Zen</h2>
               <div className="space-y-4 text-slate-600">
-                <div className="flex gap-3"><span className="font-black text-indigo-600">0.</span><p className="text-sm font-medium">Ajoutez votre <b>solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.</p></div>
-                <div className="flex gap-3"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b>.</p></div>
-                <div className="flex gap-3"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement.</p></div>
-                <div className="flex gap-3"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegarde vs CSV</b> : Utilisez l'<b>Export Backup</b> (Réglages) pour pouvoir restaurer votre budget. L'<b>Export CSV</b> est une simple lecture pour Excel.</p></div>
-                <div className="flex gap-3"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b> et sauvegardées en temps réel.</p></div>
+                {/* PARTIE 0 - ENCADRÉ BLEU */}
+                <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 flex gap-3">
+                  <span className="font-black text-indigo-600">0.</span>
+                  <p className="text-xs font-bold text-indigo-900 leading-relaxed">
+                    À la 1ère utilisation : ajoutez votre <b className="text-indigo-600">solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.
+                  </p>
+                </div>
+                
+                <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b>. Ils seront automatiquement intégrés les mois suivants.</p></div>
+                
+                <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement.</p></div>
+                
+                <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegardes</b> : Utilisez l'<b>Export Backup</b> (Réglages) pour restaurer votre budget en cas de réinitialisation. L'<b>Export CSV</b> sert à la lecture sur Excel.</p></div>
+                
+                <div className="flex gap-3 px-1"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b> et sauvegardées en temps réel.</p></div>
               </div>
               <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all mt-4">C'est parti !</button>
             </motion.div>
