@@ -1,32 +1,113 @@
-// ... (garder tes imports identiques)
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { AppState, ViewType, Transaction, BudgetAccount } from './types';
+import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
+import { MONTHS_FR } from './constants';
+import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
+
+// Firebase & Auth
+import { auth, loginWithGoogle, logout } from './firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+
+// Framer Motion
+import { motion, AnimatePresence } from 'framer-motion';
+
+import Dashboard from './components/Dashboard';
+import RecurringManager from './components/RecurringManager';
+import TransactionList from './components/TransactionList';
+import AddTransactionModal from './components/AddTransactionModal';
+import Settings from './components/Settings';
+
+const VIEW_ORDER: ViewType[] = ['DASHBOARD', 'TRANSACTIONS', 'RECURRING', 'SETTINGS'];
 
 const App: React.FC = () => {
-  // ... (garder tes states identiques)
+  const [fbUser, setFbUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [state, setState] = useState<AppState>(() => getInitialState());
+  const [activeView, setActiveView] = useState<ViewType>('DASHBOARD');
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [modalInitialDate, setModalInitialDate] = useState<string>(new Date().toISOString());
+  const [selectedDay, setSelectedDay] = useState<number | null>(new Date().getDate());
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [viewDirection, setViewDirection] = useState(0);
 
-  // --- MODIFICATION DE LA LOGIQUE D'IMPORTATION (Ligne 227 environ) ---
+  const isInitialMount = useRef(true);
+
+  // Gestion du bouton retour mobile
+  useEffect(() => {
+    window.history.replaceState({ view: 'DASHBOARD' }, '', '#dashboard');
+    const handlePopState = (event: PopStateEvent) => {
+      if (showAddModal) { setShowAddModal(false); setEditingTransaction(null); return; }
+      if (showWelcome) { setShowWelcome(false); return; }
+      if (event.state?.view) setActiveView(event.state.view);
+      else setActiveView('DASHBOARD');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showAddModal, showWelcome]);
+
+  // Surveillance de l'état Auth Firebase
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const cloudData = await fetchUserData(firebaseUser);
+        setState({
+          ...cloudData,
+          user: {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Utilisateur Google',
+            email: firebaseUser.email || '',
+            photoURL: firebaseUser.photoURL || undefined
+          }
+        });
+        setFbUser(firebaseUser);
+      } else {
+        setFbUser(null);
+        setState(getInitialState());
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Sauvegarde automatique
+  useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
+    saveState(state);
+    if (fbUser && fbUser.uid !== 'local-user') {
+      saveUserData(fbUser.uid, state);
+    }
+  }, [state, fbUser]);
+
+  const activeAccount = useMemo(() => {
+    return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
+  }, [state.accounts, state.activeAccountId]);
+
+  const now = useMemo(() => {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    return d;
+  }, []);
+
+  // Logique d'importation robuste (Anti-doublons)
   const handleImportData = async (json: any) => {
     try {
       if (!json.accounts || !Array.isArray(json.accounts)) {
         throw new Error("Format de fichier invalide");
       }
 
-      // 1. On crée une Map pour fusionner les comptes existants et importés par ID
       const mergedAccountsMap = new Map<string, BudgetAccount>();
-      
-      // On met d'abord les comptes actuels dans la Map
       state.accounts.forEach(acc => mergedAccountsMap.set(acc.id, acc));
 
-      // On ajoute/fusionne les comptes importés
       json.accounts.forEach((importedAcc: BudgetAccount) => {
         const existingAcc = mergedAccountsMap.get(importedAcc.id);
         if (existingAcc) {
-          // Fusion des transactions avec unicité par ID
           const allTx = [...importedAcc.transactions, ...existingAcc.transactions];
-          const uniqueTx = Array.from(new Map(allTx.map(t => [t.id, t])).values());
-          mergedAccountsMap.set(importedAcc.id, { 
-            ...importedAcc, 
-            transactions: uniqueTx as Transaction[] 
-          });
+          const uniqueTx = Array.from(new Map(allTx.map(t => [t.id, t])).values()) as Transaction[];
+          mergedAccountsMap.set(importedAcc.id, { ...importedAcc, transactions: uniqueTx });
         } else {
           mergedAccountsMap.set(importedAcc.id, importedAcc);
         }
@@ -40,23 +121,124 @@ const App: React.FC = () => {
         activeAccountId: nextAccounts[0]?.id || state.activeAccountId 
       };
 
-      // 2. Mise à jour de l'état local immédiatement
       setState(newState);
       saveState(newState);
-
-      // 3. Sauvegarde Cloud si connecté
       if (fbUser && fbUser.uid !== 'local-user') {
         await saveUserData(fbUser.uid, newState);
       }
-
-      alert("Importation réussie et fusionnée !");
-      // On évite le reload brutal pour laisser React gérer l'état
+      alert("Importation réussie !");
     } catch (err) {
-      alert("Erreur lors de l'importation : " + (err as Error).message);
+      alert("Erreur : " + (err as Error).message);
     }
   };
 
-  // --- REPLACER LA VUE LOGIN (Ligne 149 environ) ---
+  const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
+    if (!activeAccount) return 0;
+    let balance = activeAccount.transactions.reduce((acc, t) => {
+      return new Date(t.date) <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
+    }, 0);
+
+    if (includeProjections) {
+      const templates = activeAccount.recurringTemplates || [];
+      const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
+      let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      
+      while (scanDate <= targetDate) {
+        const m = scanDate.getMonth();
+        const y = scanDate.getFullYear();
+        
+        const paidTemplateIds = new Set(activeAccount.transactions.filter(t => {
+          const d = new Date(t.date);
+          return d.getMonth() === m && d.getFullYear() === y && t.templateId;
+        }).map(t => t.templateId));
+
+        templates.forEach(tpl => {
+          if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
+          const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
+          const vId = `virtual-${tpl.id}-${m}-${y}`;
+          if (new Date(y, m, day) <= targetDate && !deletedIds.has(vId)) {
+            balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
+          }
+        });
+        scanDate.setMonth(scanDate.getMonth() + 1);
+      }
+    }
+    return balance;
+  };
+
+  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear]);
+  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), true), [activeAccount, currentMonth, currentYear]);
+
+  const effectiveTransactions = useMemo(() => {
+    if (!activeAccount) return [];
+    const realOnes = activeAccount.transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    const paidIds = new Set(realOnes.map(t => t.templateId).filter(Boolean));
+    const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
+    
+    const virtuals = (activeAccount.recurringTemplates || [])
+      .filter(tpl => tpl.isActive && !paidIds.has(tpl.id))
+      .map(tpl => {
+        const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
+        const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
+        return {
+          id: vId, amount: tpl.amount, type: tpl.type, categoryId: tpl.categoryId,
+          comment: tpl.comment || (tpl.type === 'INCOME' ? 'Revenu fixe' : 'Charge fixe'),
+          date: new Date(currentYear, currentMonth, day, 12, 0, 0).toISOString(),
+          isRecurring: true, templateId: tpl.id
+        } as Transaction;
+      }).filter(v => !deletedIds.has(v.id));
+
+    return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [activeAccount, currentMonth, currentYear]);
+
+  const handleUpsertTransaction = (t: Omit<Transaction, 'id'> & { id?: string }) => {
+    setState(prev => {
+      const accIndex = prev.accounts.findIndex(a => a.id === prev.activeAccountId);
+      if (accIndex === -1) return prev;
+      const acc = { ...prev.accounts[accIndex] };
+      let nextTx = [...acc.transactions];
+      let nextDeleted = [...(acc.deletedVirtualIds || [])];
+      
+      const targetId = t.id || editingTransaction?.id;
+      
+      if (targetId?.startsWith('virtual-')) {
+        nextDeleted.push(targetId!);
+        nextTx = [{ ...t, id: generateId(), templateId: targetId.split('-')[1] } as Transaction, ...nextTx];
+      } else if (targetId && nextTx.some(i => i.id === targetId)) {
+        nextTx = nextTx.map(i => i.id === targetId ? ({ ...t, id: targetId } as Transaction) : i);
+      } else {
+        nextTx = [{ ...t, id: generateId() } as Transaction, ...nextTx];
+      }
+      
+      const nextAccounts = [...prev.accounts];
+      nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
+      return { ...prev, accounts: nextAccounts };
+    });
+    setShowAddModal(false);
+    setEditingTransaction(null);
+  };
+
+  const handleViewChange = (newView: ViewType) => {
+    if (newView !== activeView) {
+      const currentIndex = VIEW_ORDER.indexOf(activeView);
+      const nextIndex = VIEW_ORDER.indexOf(newView);
+      setViewDirection(nextIndex > currentIndex ? 1 : -1);
+      window.history.pushState({ view: newView }, '', `#${newView.toLowerCase()}`);
+      setActiveView(newView);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#F8F9FD]">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   if (!fbUser) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-[#F8F9FD] px-6 text-center">
@@ -67,25 +249,20 @@ const App: React.FC = () => {
         <p className="text-slate-500 mb-8 max-w-[260px] text-sm">
           Gérez vos finances avec clarté. Connectez-vous pour sauvegarder vos données.
         </p>
-        
         <div className="w-full max-w-xs space-y-3">
           <button onClick={loginWithGoogle} className="w-full py-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center gap-3 font-bold hover:bg-slate-50 active:scale-95 transition-all">
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" alt="G" className="w-5 h-5" />
             Continuer avec Google
           </button>
-
-          {/* Futur emplacement du formulaire Email/MDP */}
           <div className="py-2 flex items-center gap-3">
             <div className="h-[1px] bg-slate-200 flex-1"></div>
             <span className="text-[10px] font-bold text-slate-400 uppercase">Ou</span>
             <div className="h-[1px] bg-slate-200 flex-1"></div>
           </div>
-
           <button className="w-full py-4 bg-slate-800 text-white rounded-2xl font-bold shadow-lg shadow-slate-200 active:scale-95 transition-all text-sm">
             Créer un compte par email
           </button>
         </div>
-
         <button onClick={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} className="mt-8 text-[10px] font-black uppercase tracking-widest text-slate-400">
           Continuer en mode local
         </button>
@@ -93,10 +270,151 @@ const App: React.FC = () => {
     );
   }
 
-  // ... (Reste du return avec la mise à jour de onImport)
-  // Dans le composant Settings passé dans le return :
-  // onImport={(file) => {
-  //   const reader = new FileReader();
-  //   reader.onload = (e) => handleImportData(JSON.parse(e.target?.result as string));
-  //   reader.readAsText(file);
-  // }}
+  return (
+    <div className="flex flex-col h-screen bg-[#F8F9FD] text-slate-900 overflow-hidden font-sans">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <IconLogo className="w-8 h-8" />
+            <h1 className="text-xl font-black tracking-tighter italic">ZenBudget</h1>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
+                <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
+                <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
+             </div>
+             <button onClick={() => handleViewChange('SETTINGS')} className="p-2 text-slate-400">
+               <IconSettings className="w-5 h-5" />
+             </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 relative overflow-hidden">
+        <AnimatePresence mode="popLayout" custom={viewDirection} initial={false}>
+          <motion.div
+            key={activeView}
+            custom={viewDirection}
+            variants={{
+              enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+              center: { x: 0, opacity: 1 },
+              exit: (dir: number) => ({ x: dir < 0 ? '100%' : '-100%', opacity: 0 })
+            }}
+            initial="enter" animate="center" exit="exit"
+            transition={{ type: "spring", stiffness: 350, damping: 35 }}
+            className="absolute inset-0 px-4 pt-4 pb-24 overflow-y-auto no-scrollbar"
+          >
+            {activeView === 'DASHBOARD' && (
+              <Dashboard 
+                transactions={effectiveTransactions} categories={state.categories} activeAccount={activeAccount} allAccounts={state.accounts}
+                onSwitchAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))} month={currentMonth} year={currentYear}
+                onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
+                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 28), true)} projectedBalance={projectedBalance} carryOver={carryOver}
+              />
+            )}
+            {activeView === 'TRANSACTIONS' && (
+              <TransactionList 
+                transactions={effectiveTransactions} categories={state.categories} month={currentMonth} year={currentYear}
+                onDelete={(id) => setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === activeAccount.id ? { ...a, transactions: a.transactions.filter(tx => tx.id !== id), deletedVirtualIds: id.startsWith('virtual-') ? [...(a.deletedVirtualIds || []), id] : a.deletedVirtualIds } : a) }))}
+                onEdit={(t) => { setEditingTransaction(t); setShowAddModal(true); }}
+                onAddAtDate={(date) => { setModalInitialDate(date); setShowAddModal(true); }}
+                selectedDay={selectedDay} onSelectDay={setSelectedDay} totalBalance={projectedBalance} carryOver={carryOver} cycleEndDay={activeAccount?.cycleEndDay || 0}
+                onMonthChange={() => {}} slideDirection={slideDirection}
+              />
+            )}
+            {activeView === 'RECURRING' && (
+              <RecurringManager 
+                recurringTemplates={activeAccount?.recurringTemplates || []} categories={state.categories}
+                onUpdate={(templates) => setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === activeAccount.id ? { ...a, recurringTemplates: templates } : a) }))}
+                totalBalance={projectedBalance}
+              />
+            )}
+            {activeView === 'SETTINGS' && (
+              <Settings 
+                state={state} 
+                user={fbUser}
+                onUpdateAccounts={(accs) => setState(prev => ({ ...prev, accounts: accs }))}
+                onSetActiveAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))}
+                onDeleteAccount={(id) => {
+                  setState(prev => {
+                    const nextAccounts = prev.accounts.filter(a => a.id !== id);
+                    if (nextAccounts.length === 0) return prev;
+                    const nextActive = prev.activeAccountId === id ? nextAccounts[0].id : prev.activeAccountId;
+                    return { ...prev, accounts: nextAccounts, activeAccountId: nextActive };
+                  });
+                }}
+                onReset={() => {
+                  if(confirm("Tout supprimer ?")) {
+                    localStorage.removeItem('zenbudget_state_v3');
+                    setState(getInitialState());
+                    setTimeout(() => window.location.reload(), 50);
+                  }
+                }}
+                onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
+                onUpdateBudget={()=>{}} 
+                onLogin={loginWithGoogle} 
+                onLogout={logout} 
+                onShowWelcome={() => setShowWelcome(true)}
+                onBackup={() => {
+                  const dataStr = JSON.stringify(state);
+                  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                  const link = document.createElement('a');
+                  link.setAttribute('href', dataUri);
+                  link.setAttribute('download', 'zenbudget_backup.json');
+                  link.click();
+                }} 
+                onImport={(file) => {
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    try {
+                      const json = JSON.parse(e.target?.result as string);
+                      handleImportData(json);
+                    } catch (err) { alert("Fichier invalide"); }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
+
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center pt-2 pb-8 px-6 z-40">
+        <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Stats" />
+        <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" />
+        <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" />
+        <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Réglages" />
+      </nav>
+
+      {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
+      
+      <AnimatePresence>
+        {showWelcome && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/20 backdrop-blur-sm flex items-end justify-center" onClick={() => setShowWelcome(false)}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[32px] p-8 pb-12 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6" />
+              <h2 className="text-xl font-black mb-4 text-center text-slate-800">ZenBudget Guide</h2>
+              <p className="text-sm text-slate-500 text-center mb-8 leading-relaxed">
+                Vos données sont synchronisées avec : <br/>
+                <span className="font-bold text-indigo-600">{fbUser?.email || 'Mode Local'}</span>
+              </p>
+              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">C'est compris</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-colors ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
+    <div className="w-5 h-5">{icon}</div>
+    <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+  </button>
+);
+
+export default App;
