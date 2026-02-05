@@ -82,58 +82,61 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE DE CALCUL ANTI-DOUBLONS ---
+  // --- NOUVELLE LOGIQUE ANTI-DOUBLON PAR EMPREINTE (LIBELLÉ + MONTANT) ---
+  const paidMarkers = useMemo(() => {
+    if (!activeAccount) return new Set();
+    return new Set(
+      activeAccount.transactions
+        .filter(t => {
+          const d = new Date(t.date);
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        })
+        .map(t => `${t.comment.toLowerCase().trim()}-${t.amount}`)
+    );
+  }, [activeAccount, currentMonth, currentYear]);
+
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount || isImporting) return 0;
     
     const normalizedTarget = new Date(targetDate);
     normalizedTarget.setHours(12, 0, 0, 0);
 
+    // 1. Somme des transactions réelles jusqu'à la date
     let balance = activeAccount.transactions.reduce((acc, t) => {
       const tDate = new Date(t.date);
       tDate.setHours(12, 0, 0, 0); 
       return tDate <= normalizedTarget ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
 
+    // 2. Ajout des prévisions non encore payées (pour le mois cible uniquement)
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
       
-      let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-      while (scanDate <= normalizedTarget) {
-        const m = scanDate.getMonth();
-        const y = scanDate.getFullYear();
+      templates.forEach(tpl => {
+        if (!tpl.isActive) return;
         
-        // On récupère tous les IDs de templates déjà payés ce mois-là
-        const paidTemplateIds = new Set(
-          activeAccount.transactions
-            .filter(t => {
-              const d = new Date(t.date);
-              return d.getMonth() === m && d.getFullYear() === y && t.templateId;
-            })
-            .map(t => t.templateId)
-        );
+        // On vérifie si une transaction réelle avec le même nom/montant existe
+        const marker = `${tpl.comment?.toLowerCase().trim() || ''}-${tpl.amount}`;
+        if (paidMarkers.has(marker)) return;
 
-        templates.forEach(tpl => {
-          // Un template est ignoré s'il est inactif OU déjà payé ce mois-ci
-          if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
-
-          const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
-          const vDate = new Date(y, m, day, 12, 0, 0);
-          const vId = `virtual-${tpl.id}-${m}-${y}`;
-          
-          if (vDate <= normalizedTarget && !deletedIds.has(vId)) {
-            balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
-          }
-        });
-        scanDate.setMonth(scanDate.getMonth() + 1);
-      }
+        const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
+        const vDate = new Date(currentYear, currentMonth, day, 12, 0, 0);
+        const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
+        
+        if (vDate <= normalizedTarget && !deletedIds.has(vId)) {
+          balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
+        }
+      });
     }
     return balance;
   };
 
-  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear, isImporting]);
-  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), true), [activeAccount, currentMonth, currentYear, isImporting]);
+  // Calculs pour le Dashboard
+  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
+  
+  // Le report est le solde réel à la fin du mois dernier (sans projections)
+  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), false), [activeAccount, currentMonth, currentYear, isImporting]);
 
   const effectiveTransactions = useMemo(() => {
     if (!activeAccount || isImporting) return [];
@@ -143,12 +146,13 @@ const App: React.FC = () => {
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
     
-    // IDs de templates déjà présents en transaction réelle
-    const paidIds = new Set(realOnes.map(t => t.templateId).filter(Boolean));
     const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
     
     const virtuals = (activeAccount.recurringTemplates || [])
-      .filter(tpl => tpl.isActive && !paidIds.has(tpl.id)) // ICI : Filtre anti-doublon strict
+      .filter(tpl => {
+        const marker = `${tpl.comment?.toLowerCase().trim() || ''}-${tpl.amount}`;
+        return tpl.isActive && !paidMarkers.has(marker);
+      })
       .map(tpl => {
         const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
         const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
@@ -161,7 +165,7 @@ const App: React.FC = () => {
       }).filter(v => !deletedIds.has(v.id));
       
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [activeAccount, currentMonth, currentYear, isImporting]);
+  }, [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
 
   const handleUpsertTransaction = (t: Omit<Transaction, 'id'> & { id?: string }) => {
     setState(prev => {
