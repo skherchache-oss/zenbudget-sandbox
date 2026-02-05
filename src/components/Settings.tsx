@@ -2,11 +2,11 @@ import React, { useState, useRef } from 'react';
 import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
-import { User as FirebaseUser } from 'firebase/auth'; // Import du type Firebase
+import { User as FirebaseUser } from 'firebase/auth';
 
 interface SettingsProps { 
   state: AppState; 
-  user: FirebaseUser | null; // Ajout de la prop user
+  user: FirebaseUser | null;
   onUpdateAccounts: (accounts: BudgetAccount[]) => void; 
   onSetActiveAccount: (id: string) => void; 
   onDeleteAccount: (id: string) => void; 
@@ -79,6 +79,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const activeAccount = state.accounts.find(a => a.id === state.activeAccountId); 
   const currentCycleDay = activeAccount?.cycleEndDay || 0;
@@ -130,36 +131,48 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
       {/* SECTION PROFIL / AUTH CORRIGÉE */}
-      <section className="bg-white p-5 rounded-[32px] border border-slate-50 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner">
+      <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
+        <div className="flex flex-col items-center text-center gap-4">
+          {/* Avatar avec bouton edit */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Profil" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-xl font-black text-indigo-600 uppercase">
+                <span className="text-2xl font-black text-indigo-600 uppercase">
                   {user?.displayName?.charAt(0) || 'Z'}
                 </span>
               )}
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <h3 className="font-black text-slate-800 text-[14px] leading-tight truncate max-w-[120px]">
-                  {user?.displayName || 'Utilisateur Invité'}
-                </h3>
-                <div className={`w-1.5 h-1.5 rounded-full ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-              </div>
-              <p className="text-[10px] font-medium text-slate-400 truncate max-w-[150px]">
-                {user?.email || 'Données stockées localement'}
-              </p>
-            </div>
+            <button 
+              onClick={() => photoInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 w-8 h-8 bg-white border border-slate-100 rounded-full shadow-lg flex items-center justify-center text-indigo-600 active:scale-90 transition-transform"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+            <input type="file" ref={photoInputRef} hidden accept="image/*" />
           </div>
-          
+
+          <div className="flex flex-col items-center w-full min-w-0">
+            <div className="flex items-center gap-2 mb-1 max-w-full">
+              <h3 className="font-black text-slate-800 text-lg leading-tight truncate">
+                {user?.displayName || 'Utilisateur Invité'}
+              </h3>
+              <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 truncate w-full px-4">
+              {user?.email || 'Mode Hors-ligne'}
+            </p>
+          </div>
+
           <button 
             onClick={() => isRealUser ? onLogout() : onLogin()}
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-400 border border-slate-100'}`}
+            className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}
           >
-            {isRealUser ? 'Déconnexion' : 'Connexion'}
+            {isRealUser ? 'Se déconnecter de ZenBudget' : 'Se connecter / S\'inscrire'}
           </button>
         </div>
       </section>
