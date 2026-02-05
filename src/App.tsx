@@ -80,7 +80,7 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE METIER (Calculs) ---
+  // --- LOGIQUE CALCULS ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     let balance = activeAccount.transactions.reduce((acc, t) => {
@@ -257,60 +257,33 @@ const App: React.FC = () => {
 
       {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
       
-      {/* POPUP GUIDE ZEN - CONTENU REPRIS DE TA VERSION PRÉCÉDENTE */}
+      {/* --- GUIDE ZEN FUSIONNÉ --- */}
       <AnimatePresence>
         {showWelcome && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-end justify-center px-4" onClick={() => setShowWelcome(false)}>
-            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full max-w-lg rounded-t-[40px] p-8 pb-12 shadow-2xl max-h-[85vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
-              <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-8" />
-              
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-indigo-50 rounded-[24px] flex items-center justify-center mx-auto mb-4">
-                  <IconLogo className="w-10 h-10 text-indigo-600" />
-                </div>
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight italic">Guide Zen</h2>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Maîtrisez votre budget réel</p>
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-6" 
+            onClick={() => setShowWelcome(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] max-w-md w-full p-8 shadow-2xl space-y-6" 
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-center text-4xl">🌿</div>
+              <h2 className="text-2xl font-black text-center italic text-slate-800">Guide Zen</h2>
+              <div className="space-y-4 text-slate-600">
+                <div className="flex gap-3"><span className="font-black text-indigo-600">0.</span><p className="text-sm font-medium">Ajoutez votre <b>solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.</p></div>
+                <div className="flex gap-3"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b>.</p></div>
+                <div className="flex gap-3"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement.</p></div>
+                <div className="flex gap-3"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegarde vs CSV</b> : Utilisez l'<b>Export Backup</b> (Réglages) pour pouvoir restaurer votre budget. L'<b>Export CSV</b> est une simple lecture pour Excel.</p></div>
+                <div className="flex gap-3"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b> et sauvegardées en temps réel.</p></div>
               </div>
-
-              <div className="space-y-6">
-                {[
-                  { 
-                    step: "0.", 
-                    title: "Calibrage Initial", 
-                    desc: "Ajoutez votre solde bancaire actuel comme un Revenu ponctuel aujourd'hui dans le Journal. C'est votre point de départ pour des calculs précis." 
-                  },
-                  { 
-                    step: "1.", 
-                    title: "Flux Fixes", 
-                    desc: "Configurez vos flux fixes (loyer, abonnements...) dans l'onglet 'Fixes'. Ils se projetteront automatiquement chaque mois." 
-                  },
-                  { 
-                    step: "2.", 
-                    title: "Disponible Réel", 
-                    desc: "Vérifiez votre 'Disponible Réel' : c'est l'argent que vous pouvez dépenser sereinement après avoir pris en compte vos charges à venir." 
-                  },
-                  { 
-                    step: "3.", 
-                    title: "Sauvegarde & Synchro", 
-                    desc: `Vos données sont liées à ${fbUser?.email || 'votre compte'}. Utilisez l'Export Backup (Réglages) pour une sécurité supplémentaire.` 
-                  }
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-5 items-start p-4 rounded-[24px] bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                    <span className="text-xl font-black leading-none pt-1 text-indigo-600">{item.step}</span>
-                    <div>
-                      <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-tight mb-1">{item.title}</h3>
-                      <p className="text-[12px] text-slate-500 leading-relaxed font-medium">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => setShowWelcome(false)} 
-                className="w-full mt-10 py-5 bg-slate-900 text-white font-black rounded-[20px] uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all"
-              >
-                C'est parti ! ✨
-              </button>
+              <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">C'est parti !</button>
             </motion.div>
           </motion.div>
         )}
@@ -320,7 +293,7 @@ const App: React.FC = () => {
 };
 
 const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-colors ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
     <div className="w-5 h-5">{icon}</div>
     <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
   </button>
