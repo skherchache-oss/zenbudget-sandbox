@@ -82,44 +82,47 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // --- LOGIQUE DE CALCUL ROBUSTE ---
+  // --- LOGIQUE DE CALCUL ANTI-DOUBLONS ---
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount || isImporting) return 0;
     
-    // 1. Calcul du solde réel (Transactions saisies)
+    const normalizedTarget = new Date(targetDate);
+    normalizedTarget.setHours(12, 0, 0, 0);
+
     let balance = activeAccount.transactions.reduce((acc, t) => {
       const tDate = new Date(t.date);
-      tDate.setHours(12, 0, 0, 0); // Normalisation
-      return tDate <= targetDate ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
+      tDate.setHours(12, 0, 0, 0); 
+      return tDate <= normalizedTarget ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
 
-    // 2. Ajout des prévisions non encore payées
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
       
-      // On scanne les 6 mois passés pour inclure les retards éventuels
       let scanDate = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-      while (scanDate <= targetDate) {
+      while (scanDate <= normalizedTarget) {
         const m = scanDate.getMonth();
         const y = scanDate.getFullYear();
         
-        // Détection intelligente des doublons par templateId
-        const paidTemplateIds = new Set(activeAccount.transactions
-          .filter(t => {
-            const d = new Date(t.date);
-            return d.getMonth() === m && d.getFullYear() === y && t.templateId;
-          })
-          .map(t => t.templateId)
+        // On récupère tous les IDs de templates déjà payés ce mois-là
+        const paidTemplateIds = new Set(
+          activeAccount.transactions
+            .filter(t => {
+              const d = new Date(t.date);
+              return d.getMonth() === m && d.getFullYear() === y && t.templateId;
+            })
+            .map(t => t.templateId)
         );
 
         templates.forEach(tpl => {
+          // Un template est ignoré s'il est inactif OU déjà payé ce mois-ci
           if (!tpl.isActive || paidTemplateIds.has(tpl.id)) return;
+
           const day = Math.min(tpl.dayOfMonth, new Date(y, m + 1, 0).getDate());
           const vDate = new Date(y, m, day, 12, 0, 0);
           const vId = `virtual-${tpl.id}-${m}-${y}`;
           
-          if (vDate <= targetDate && !deletedIds.has(vId)) {
+          if (vDate <= normalizedTarget && !deletedIds.has(vId)) {
             balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
           }
         });
@@ -134,16 +137,18 @@ const App: React.FC = () => {
 
   const effectiveTransactions = useMemo(() => {
     if (!activeAccount || isImporting) return [];
+    
     const realOnes = activeAccount.transactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
     
+    // IDs de templates déjà présents en transaction réelle
     const paidIds = new Set(realOnes.map(t => t.templateId).filter(Boolean));
     const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
     
     const virtuals = (activeAccount.recurringTemplates || [])
-      .filter(tpl => tpl.isActive && !paidIds.has(tpl.id))
+      .filter(tpl => tpl.isActive && !paidIds.has(tpl.id)) // ICI : Filtre anti-doublon strict
       .map(tpl => {
         const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
         const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
@@ -225,7 +230,7 @@ const App: React.FC = () => {
                 transactions={effectiveTransactions} categories={state.categories} activeAccount={activeAccount} allAccounts={state.accounts}
                 onSwitchAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))} month={currentMonth} year={currentYear}
                 onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
-                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 25), true)} projectedBalance={projectedBalance} carryOver={carryOver}
+                availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 26), true)} projectedBalance={projectedBalance} carryOver={carryOver}
               />
             )}
             {activeView === 'TRANSACTIONS' && (
