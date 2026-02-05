@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'; 
-import { AppState, BudgetAccount } from '../types'; 
+import { AppState, BudgetAccount, User } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
 
@@ -11,6 +11,7 @@ interface SettingsProps {
   onReset: () => void; 
   onUpdateCategories: (cats: any) => void; 
   onUpdateBudget: (val: number) => void; 
+  onLogin: (user: User) => void;
   onLogout: () => void; 
   onShowWelcome: () => void; 
   onBackup: () => void;
@@ -69,18 +70,21 @@ const AccountItem: React.FC<{
   ); 
 }; 
 
-const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport }) => { 
+const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout }) => { 
   const [isAddingAccount, setIsAddingAccount] = useState(false); 
   const [newAccName, setNewAccName] = useState(''); 
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [email, setEmail] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeAccount = state.accounts.find(a => a.id === state.activeAccountId); 
   const currentCycleDay = activeAccount?.cycleEndDay || 0;
   const presets = [25, 26, 27, 28, 0];
   const isCustomDay = !presets.includes(currentCycleDay);
+  const isLocalUser = state.user?.id === 'local-user';
 
   const SectionTitle: React.FC<{ title: string }> = ({ title }) => ( 
     <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-3">{title}</h2> 
@@ -121,20 +125,89 @@ const Settings: React.FC<SettingsProps> = ({ state, onUpdateAccounts, onSetActiv
     }
   };
 
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    onLogin({
+      id: 'user-' + Math.random().toString(36).substr(2, 5),
+      email: email,
+      name: email.split('@')[0],
+    });
+    setShowAuthForm(false);
+  };
+
+  const handleGoogleLogin = () => {
+    onLogin({
+      id: 'google-' + Math.random().toString(36).substr(2, 5),
+      email: 'zen.user@gmail.com',
+      name: 'Utilisateur Zen',
+      photoURL: 'https://ui-avatars.com/api/?name=Zen+User&background=4f46e5&color=fff'
+    });
+    setShowAuthForm(false);
+  };
+
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
-      <div className="bg-white p-4 rounded-[24px] border border-slate-50 flex items-center justify-between shadow-sm"> 
-        <div className="flex items-center gap-3"> 
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg">✨</div> 
-          <div> 
-            <h3 className="font-black text-slate-800 text-[13px] leading-tight">Session Locale</h3> 
-            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">ZenBudget v5.4</p> 
-          </div> 
-        </div> 
-      </div> 
+      {/* SECTION PROFIL / AUTH */}
+      <section className="bg-white p-5 rounded-[32px] border border-slate-50 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner">
+              {state.user?.photoURL ? (
+                <img src={state.user.photoURL} alt="Profil" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl font-black text-indigo-600 uppercase">
+                  {state.user?.name?.charAt(0) || 'Z'}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-slate-800 text-[14px] leading-tight">
+                  {isLocalUser ? 'Mode Invité' : state.user?.name}
+                </h3>
+                <div className={`w-1.5 h-1.5 rounded-full ${isLocalUser ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+              </div>
+              <p className="text-[10px] font-medium text-slate-400">
+                {isLocalUser ? 'Données stockées localement' : state.user?.email}
+              </p>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => isLocalUser ? setShowAuthForm(!showAuthForm) : onLogout()}
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${isLocalUser ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 border border-slate-100'}`}
+          >
+            {isLocalUser ? (showAuthForm ? 'Fermer' : 'Connexion') : 'Déconnexion'}
+          </button>
+        </div>
 
-      {/* Guide Zen remonté tout en haut sous "Session Locale" */}
+        {isLocalUser && showAuthForm && (
+          <div className="pt-4 border-t border-slate-50 space-y-4 animate-in fade-in duration-300">
+            <div className="flex gap-2">
+              <button onClick={handleGoogleLogin} className="flex-1 py-3 bg-white border border-slate-100 rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all">
+                <img src="https://www.google.com/favicon.ico" className="w-3 h-3" alt="G" />
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Google</span>
+              </button>
+              <div className="flex items-center text-[8px] font-black text-slate-300 uppercase px-2">Ou</div>
+              <form onSubmit={handleAuthSubmit} className="flex-[2] flex gap-2">
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  placeholder="votre@email.com" 
+                  className="flex-1 bg-slate-50 border-none rounded-xl px-3 py-2 text-[10px] font-bold outline-none"
+                  required
+                />
+                <button type="submit" className="bg-slate-900 text-white px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">OK</button>
+              </form>
+            </div>
+            <p className="text-[8px] text-center text-slate-400 font-medium">Connectez-vous pour synchroniser vos comptes sur tous vos appareils.</p>
+          </div>
+        )}
+      </section>
+
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
