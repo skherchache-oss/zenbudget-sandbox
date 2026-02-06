@@ -65,11 +65,15 @@ const App: React.FC = () => {
         setEditingTransaction(null);
       }
     };
+
     if (showAddModal) {
       window.history.pushState({ modalOpen: true }, '');
       window.addEventListener('popstate', handlePopState);
     }
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [showAddModal]);
 
   const openAddModal = (date?: string, editItem?: Transaction | null) => {
@@ -342,6 +346,7 @@ const App: React.FC = () => {
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
+        {/* LE GUIDE ZEN COMPLET RÉTABLI ICI */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowWelcome(false)}>
@@ -356,16 +361,32 @@ const App: React.FC = () => {
                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
                      </p>
                    </div>
+
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">1.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
                       </p>
                    </div>
+
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">2.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
+                      </p>
+                   </div>
+
+                   <div className="flex gap-3 px-1 items-start">
+                      <span className="font-black text-indigo-600">3.</span>
+                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
+                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
+                      </p>
+                   </div>
+
+                   <div className="flex gap-3 px-1 items-start border-t border-slate-50 pt-2">
+                      <span className="font-black text-indigo-600">4.</span>
+                      <p className="text-[11px] font-medium text-slate-400 italic leading-tight">
+                        <span className="font-bold">Sauvegarde</span> : Export Backup (Paramètres) pour restaurer. Export CSV (Board) pour Excel.
                       </p>
                    </div>
                 </div>
