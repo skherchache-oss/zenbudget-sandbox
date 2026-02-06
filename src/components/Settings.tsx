@@ -18,6 +18,8 @@ interface SettingsProps {
   onShowWelcome: () => void; 
   onBackup: () => void;
   onImport: (file: File) => void;
+  // Ajout d'une prop pour mettre à jour l'utilisateur dans l'état global
+  onUpdateUser?: (userData: any) => void; 
 } 
 
 const AccountItem: React.FC<{ 
@@ -78,6 +80,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -127,17 +130,23 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && user && user.uid !== 'local-user') {
+      setIsUploading(true);
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        if (user && user.uid !== 'local-user') {
-          try {
-            await updateProfile(user, { photoURL: base64 });
-            window.location.reload(); // Rechargement pour voir la nouvelle photo
-          } catch (err) {
-            console.error("Erreur mise à jour photo:", err);
-          }
+        try {
+          // 1. Mettre à jour Firebase Auth
+          await updateProfile(user, { photoURL: base64 });
+          
+          // 2. Note : Pour que l'UI se mette à jour sans reload, 
+          // on force un petit délai et un refresh ou on utilise un state local
+          setIsUploading(false);
+          window.location.reload(); 
+        } catch (err) {
+          console.error("Erreur mise à jour photo:", err);
+          setIsUploading(false);
+          alert("Erreur lors de la mise à jour de la photo");
         }
       };
       reader.readAsDataURL(file);
@@ -153,7 +162,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           <div className="relative">
-            <div className="w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl">
+            <div className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl ${isUploading ? 'opacity-50' : ''}`}>
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Profil" className="w-full h-full object-cover" />
               ) : (
@@ -161,16 +170,25 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
                   {user?.displayName?.charAt(0) || 'Z'}
                 </span>
               )}
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
-            <button 
-              onClick={() => photoInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 w-8 h-8 bg-white border border-slate-100 rounded-full shadow-lg flex items-center justify-center text-indigo-600 active:scale-90 transition-transform"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
+            
+            {isRealUser && (
+              <button 
+                onClick={() => photoInputRef.current?.click()}
+                disabled={isUploading}
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-white border border-slate-100 rounded-full shadow-lg flex items-center justify-center text-indigo-600 active:scale-90 transition-transform disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
             <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
 

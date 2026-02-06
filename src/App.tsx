@@ -84,6 +84,7 @@ const App: React.FC = () => {
 
   const sanitizeForFirebase = (obj: any): any => JSON.parse(JSON.stringify(obj));
 
+  // --- SYNCHRONISATION AUTH ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setAuthLoading(true);
@@ -113,6 +114,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // --- SAUVEGARDE AUTO ---
   useEffect(() => {
     if (isInitializing || authLoading || isImporting.current) return;
     saveState(state);
@@ -120,6 +122,18 @@ const App: React.FC = () => {
       saveUserData(fbUser.uid, sanitizeForFirebase(state));
     }
   }, [state, fbUser, authLoading, isInitializing]);
+
+  // --- ACTION : MISE À JOUR MANUELLE DE L'USER (Photo/Nom) ---
+  const handleUpdateUser = (updatedUser: { name?: string; photoURL?: string | null }) => {
+    setState(prev => ({
+      ...prev,
+      user: {
+        ...prev.user,
+        ...(updatedUser.name && { name: updatedUser.name }),
+        ...(updatedUser.photoURL !== undefined && { photoURL: updatedUser.photoURL })
+      }
+    }));
+  };
 
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
@@ -243,9 +257,15 @@ const App: React.FC = () => {
                <IconLogo className="w-8 h-8" />
               <h1 className="text-xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
             </div>
-            <button onClick={() => setShowWelcome(true)} className="text-slate-300 hover:text-indigo-500 transition-colors">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </button>
+            {/* L'image de profil en haut s'appuie sur state.user.photoURL */}
+            <div className="flex items-center gap-4">
+              {state.user.photoURL && (
+                <img src={state.user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
+              )}
+              <button onClick={() => setShowWelcome(true)} className="text-slate-300 hover:text-indigo-500 transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -295,6 +315,7 @@ const App: React.FC = () => {
                   state={state} user={fbUser}
                   onUpdateAccounts={(accs) => setState(prev => ({ ...prev, accounts: accs }))}
                   onSetActiveAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))}
+                  onUpdateUser={handleUpdateUser} /* ON PASSE LA FONCTION ICI */
                   onDeleteAccount={(id) => {
                     setState(prev => {
                       const nextAccounts = prev.accounts.filter(a => a.id !== id);
@@ -346,7 +367,6 @@ const App: React.FC = () => {
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
-        {/* LE GUIDE ZEN COMPLET RÉTABLI ICI */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowWelcome(false)}>
