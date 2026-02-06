@@ -38,6 +38,34 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
 
+  // --- LOGIQUE BOUTON RETOUR ANDROID ---
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // Si le modal est ouvert, on le ferme et on empêche le retour arrière de l'URL
+      if (showAddModal) {
+        setShowAddModal(false);
+        setEditingTransaction(null);
+      }
+    };
+
+    if (showAddModal) {
+      // On pousse un état bidon dans l'historique quand on ouvre le modal
+      window.history.pushState({ modalOpen: true }, '');
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [showAddModal]);
+
+  const openAddModal = (date?: string, editItem?: Transaction | null) => {
+    if (editItem) setEditingTransaction(editItem);
+    if (date) setModalInitialDate(date);
+    setShowAddModal(true);
+  };
+  // -------------------------------------
+
   const sanitizeForFirebase = (obj: any): any => JSON.parse(JSON.stringify(obj));
 
   useEffect(() => {
@@ -227,8 +255,8 @@ const App: React.FC = () => {
                 <TransactionList 
                   transactions={effectiveTransactions} categories={state.categories} month={currentMonth} year={currentYear}
                   onDelete={(id) => setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === activeAccount.id ? { ...a, transactions: a.transactions.filter(tx => tx.id !== id), deletedVirtualIds: id.startsWith('virtual-') ? [...(a.deletedVirtualIds || []), id] : a.deletedVirtualIds } : a) }))}
-                  onEdit={(t) => { setEditingTransaction(t); setShowAddModal(true); }}
-                  onAddAtDate={(date) => { setModalInitialDate(date); setShowAddModal(true); }}
+                  onEdit={(t) => openAddModal(undefined, t)}
+                  onAddAtDate={(date) => openAddModal(date)}
                   selectedDay={selectedDay} onSelectDay={setSelectedDay} totalBalance={projectedBalance} carryOver={carryOver} cycleEndDay={activeAccount?.cycleEndDay || 0}
                   onMonthChange={() => {}} slideDirection={slideDirection}
                 />
@@ -285,18 +313,18 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
 
-        <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="absolute bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-7 h-7" /></button>
+        <button onClick={() => openAddModal()} className="absolute bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-7 h-7" /></button>
 
         <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 grid grid-cols-4 items-center pt-3 pb-8 px-2 z-40">
-          <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Bord" fullLabel="Tableau de bord" />
+          <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Board" fullLabel="Board" />
           <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" fullLabel="Journal" />
           <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" fullLabel="Charges fixes" />
           <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Param." fullLabel="Paramètres" />
         </nav>
 
-        {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
+        {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
-        {/* LE GUIDE ZEN NETTOYÉ */}
+        {/* LE GUIDE ZEN */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
@@ -329,7 +357,7 @@ const App: React.FC = () => {
                    <div className="flex gap-4 px-2 items-start">
                       <span className="font-black text-indigo-600 text-lg">3.</span>
                       <p className="text-[13px] font-medium text-slate-600 leading-snug">
-                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le Board : c'est l'argent que vous pouvez dépenser sereinement pour éviter le découvert.
+                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> : c'est l'argent que vous pouvez dépenser sereinement pour éviter le découvert.
                       </p>
                    </div>
 
