@@ -52,42 +52,35 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   return (
-    /* Le fond de page : 
-       - Mobile : Blanc pur (bg-white)
-       - Desktop (sm:) : Le dégradé sombre original
-    */
-    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-white sm:bg-slate-950 font-sans sm:bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] sm:from-slate-900 sm:via-slate-950 sm:to-black overflow-y-auto transition-colors duration-500">
+    <div className="fixed inset-0 w-full flex flex-col items-center justify-center bg-white sm:bg-slate-950 font-sans sm:bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] sm:from-slate-900 sm:via-slate-950 sm:to-black overflow-hidden">
       
-      {/* Le conteneur :
-          - Mobile : Prend toute la largeur/hauteur, pas de shadow, pas de border.
-          - Desktop : Carte blanche arrondie avec shadow.
-      */}
-      <div className="w-full max-w-[440px] bg-white sm:bg-white/95 sm:backdrop-blur-2xl p-8 sm:p-10 rounded-none sm:rounded-[50px] sm:shadow-[0_20px_50px_rgba(0,0,0,0.3)] sm:border sm:border-white/20 flex flex-col my-auto">
+      {/* Carte centrée et compactée */}
+      <div className="w-[90%] max-w-[400px] bg-white sm:bg-white/95 sm:backdrop-blur-2xl p-6 sm:p-10 rounded-[40px] sm:rounded-[50px] sm:shadow-[0_20px_50px_rgba(0,0,0,0.3)] sm:border sm:border-white/20 flex flex-col items-stretch overflow-hidden">
         
-        <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-2xl flex items-center justify-center mb-8 mx-auto transform -rotate-6 shrink-0">
-          <IconLogo className="w-12 h-12 text-white" />
+        <div className="w-16 h-16 bg-slate-900 rounded-[22px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0">
+          <IconLogo className="w-10 h-10 text-white" />
         </div>
         
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-2 text-center">
+        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-1 text-center">
            {isLogin ? getGreeting() : "Bienvenue"}
         </p>
         
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter mb-3 italic text-slate-900 leading-none text-center">
-          {isLogin ? 'Ma Situation' : 'Commencer l\'aventure'}
+        <h1 className="text-xl sm:text-2xl font-black tracking-tighter mb-2 italic text-slate-900 leading-none text-center">
+          {isLogin ? 'Ma Situation' : 'Créer un compte'}
         </h1>
         
-        <p className="text-slate-500 mb-10 text-sm font-medium leading-relaxed px-4 text-center">
-          {isLogin ? 'Retrouvez votre sérénité financière en un clin d\'œil.' : 'Créez votre compte ZenBudget en quelques secondes.'}
+        <p className="text-slate-500 mb-6 text-xs font-medium leading-relaxed px-2 text-center">
+          {isLogin ? 'Retrouvez votre sérénité financière.' : 'Rejoignez ZenBudget en quelques secondes.'}
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+        <form onSubmit={handleSubmit} className="space-y-3 mb-6">
           {!isLogin && (
             <input
               type="text"
-              placeholder="Votre nom complet"
+              placeholder="Nom complet"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 transition-all shadow-inner"
               required
             />
           )}
@@ -96,7 +89,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 transition-all shadow-inner"
             required
           />
           <input
@@ -104,12 +97,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             placeholder="Mot de passe"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 transition-all shadow-inner"
             required
           />
 
           {error && (
-            <div className="bg-rose-50 text-rose-500 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-100 text-center">
+            <div className="bg-rose-50 text-rose-500 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 text-center">
               {error}
             </div>
           )}
@@ -117,33 +110,33 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-5 bg-indigo-600 text-white rounded-[20px] font-black shadow-xl shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-xs uppercase tracking-[0.2em] disabled:opacity-50 mt-2"
+            className="w-full py-4 bg-indigo-600 text-white rounded-[18px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[10px] uppercase tracking-[0.2em] disabled:opacity-50"
           >
-            {loading ? 'Connexion...' : isLogin ? 'Accéder à mon budget' : 'Créer mon espace'}
+            {loading ? 'Connexion...' : isLogin ? 'Se connecter' : 'Créer'}
           </button>
         </form>
 
-        <div className="space-y-6 flex flex-col">
+        <div className="space-y-4 flex flex-col">
           <button 
             type="button"
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors mx-auto"
+            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors mx-auto"
           >
-            {isLogin ? "Nouveau ici ? Créer un compte" : "Déjà membre ? Se connecter"}
+            {isLogin ? "Créer un compte" : "Se connecter"}
           </button>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="h-[1px] bg-slate-100 flex-1"></div>
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Ou</span>
+            <span className="text-[9px] font-black text-slate-300 uppercase">Ou</span>
             <div className="h-[1px] bg-slate-100 flex-1"></div>
           </div>
 
           <button 
             type="button"
             onClick={loginWithGoogle} 
-            className="w-full py-4 bg-white border border-slate-200 rounded-[20px] shadow-sm flex items-center justify-center gap-4 font-black hover:bg-slate-50 active:scale-95 transition-all text-xs uppercase tracking-tighter text-slate-700 overflow-hidden"
+            className="w-full py-3 bg-white border border-slate-200 rounded-[18px] shadow-sm flex items-center justify-center gap-3 font-black hover:bg-slate-50 active:scale-95 transition-all text-[10px] uppercase tracking-tighter text-slate-700"
           >
-            <div className="w-5 h-5 flex-shrink-0">
+            <div className="w-4 h-4 shrink-0">
               <svg viewBox="0 0 24 24" className="w-full h-full">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -151,21 +144,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
               </svg>
             </div>
-            Continuer avec Google
+            Google
           </button>
         </div>
 
         <button 
           type="button"
           onClick={onLocalMode} 
-          className="mt-10 w-full py-4 bg-slate-900 text-white rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 active:scale-95 transition-all"
+          className="mt-6 w-full py-3.5 bg-slate-900 text-white rounded-[18px] text-[9px] font-black uppercase tracking-[0.2em] shadow-lg hover:bg-slate-800 active:scale-95 transition-all"
         >
-          Continuer en Mode Invité
+          Mode Invité
         </button>
       </div>
       
-      {/* Footer parfaitement intégré dans le scroll mobile */}
-      <p className="py-8 text-slate-400 sm:text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">
+      <p className="absolute bottom-6 text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em] opacity-60">
         ZenBudget — Est. 2026
       </p>
     </div>
