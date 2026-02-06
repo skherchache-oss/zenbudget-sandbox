@@ -18,8 +18,7 @@ interface SettingsProps {
   onShowWelcome: () => void; 
   onBackup: () => void;
   onImport: (file: File) => void;
-  // Ajout d'une prop pour mettre à jour l'utilisateur dans l'état global
-  onUpdateUser?: (userData: any) => void; 
+  onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
 const AccountItem: React.FC<{ 
@@ -74,7 +73,7 @@ const AccountItem: React.FC<{
   ); 
 }; 
 
-const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout }) => { 
+const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout, onUpdateUser }) => { 
   const [isAddingAccount, setIsAddingAccount] = useState(false); 
   const [newAccName, setNewAccName] = useState(''); 
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
@@ -139,10 +138,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           // 1. Mettre à jour Firebase Auth
           await updateProfile(user, { photoURL: base64 });
           
-          // 2. Note : Pour que l'UI se mette à jour sans reload, 
-          // on force un petit délai et un refresh ou on utilise un state local
+          // 2. Mettre à jour l'état global immédiatement
+          onUpdateUser({ photoURL: base64 });
+          
           setIsUploading(false);
-          window.location.reload(); 
         } catch (err) {
           console.error("Erreur mise à jour photo:", err);
           setIsUploading(false);
@@ -163,8 +162,8 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         <div className="flex flex-col items-center text-center gap-4">
           <div className="relative">
             <div className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl ${isUploading ? 'opacity-50' : ''}`}>
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="Profil" className="w-full h-full object-cover" />
+              {state.user.photoURL ? (
+                <img src={state.user.photoURL} alt="Profil" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl font-black text-indigo-600 uppercase">
                   {user?.displayName?.charAt(0) || 'Z'}
@@ -333,16 +332,16 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
             Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
           </p> 
-          <button   
-            onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}  
+          <button    
+            onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}   
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
             Signaler un bug ou proposer une idée ✨ 
           </button> 
         </div> 
 
-        <button   
-          onClick={onReset}   
+        <button    
+          onClick={onReset}    
           className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
         > 
           Réinitialiser les données 
