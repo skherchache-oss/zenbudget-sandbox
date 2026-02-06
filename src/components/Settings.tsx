@@ -127,30 +127,45 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
-  const compressImage = (base64Str: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        // Firebase Auth photoURL est limité à ~2048 caractères.
-        // On force une taille minuscule (64x64) car c'est juste pour un avatar.
-        const SIZE = 64; 
-        canvas.width = SIZE;
-        canvas.height = SIZE;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          // On dessine en mode "cover" pour garder le ratio
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // 128x128 offre une bien meilleure netteté que 64x64
+          const SIZE = 128;
+          canvas.width = SIZE;
+          canvas.height = SIZE;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject("Canvas error");
+
+          // Remplissage fond blanc (pour éviter la transparence noire en JPEG)
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, SIZE, SIZE);
+
+          // Calcul pour centrer l'image (Object-fit cover)
           const ratio = Math.max(SIZE / img.width, SIZE / img.height);
           const x = (SIZE - img.width * ratio) / 2;
           const y = (SIZE - img.height * ratio) / 2;
-          ctx.fillStyle = "white";
-          ctx.fillRect(0, 0, SIZE, SIZE);
           ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
-        }
-        // JPEG à 0.4 de qualité produit une string Base64 très courte
-        resolve(canvas.toDataURL('image/jpeg', 0.4));
+
+          // Test qualité WebP (plus efficace)
+          let quality = 0.6;
+          let dataUrl = canvas.toDataURL('image/webp', quality);
+
+          // Si WebP n'est pas supporté ou trop long (> 2048 caractères)
+          if (dataUrl.length > 2000 || dataUrl.startsWith('data:image/png')) {
+             dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          }
+
+          resolve(dataUrl);
+        };
       };
+      reader.onerror = (error) => reject(error);
     });
   };
 
@@ -158,21 +173,22 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     const file = e.target.files?.[0];
     if (file && user && user.uid !== 'local-user') {
       setIsUploading(true);
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const compressed = await compressImage(reader.result as string);
-          // Tentative de mise à jour du profil Firebase
-          await updateProfile(user, { photoURL: compressed });
-          onUpdateUser({ photoURL: compressed });
-        } catch (err) {
-          console.error("Erreur mise à jour photo:", err);
-          alert("L'image ne peut pas être enregistrée. Essayez un autre format.");
-        } finally {
-          setIsUploading(false);
+      try {
+        const compressed = await compressImage(file);
+        
+        if (compressed.length > 2048) {
+            throw new Error("L'image est encore trop grande pour le mode gratuit.");
         }
-      };
-      reader.readAsDataURL(file);
+
+        await updateProfile(user, { photoURL: compressed });
+        onUpdateUser({ photoURL: compressed });
+      } catch (err: any) {
+        console.error("Erreur mise à jour photo:", err);
+        alert(err.message || "Erreur lors du traitement de l'image.");
+      } finally {
+        setIsUploading(false);
+        if (photoInputRef.current) photoInputRef.current.value = ""; 
+      }
     }
   };
 
