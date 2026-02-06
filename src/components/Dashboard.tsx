@@ -52,7 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     setLoadingAdvice(true);
     try {
-      const genAI = new GoogleGenerativeAI(API_KEY); const model =
+      const genAI = new GoogleGenerativeAI(API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       
       const result = await model.generateContent("Donne un conseil financier zen très court (max 60 caractères) en français, sans guillemets.");
