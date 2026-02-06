@@ -213,26 +213,26 @@ const App: React.FC = () => {
     }
   };
 
-  if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#F8F9FD]"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
+  if (authLoading) return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
   if (!fbUser) return <AuthScreen onLocalMode={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} />;
 
   return (
-    /* FOND GLOBAL : Noir Profond / Slate avec un dégradé radial élégant */
-    <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+    /* FOND GLOBAL : Sombre et Profond */
+    <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
       
-      {/* CADRE DE L'APPLICATION : Légèrement plus large (540px) */}
-      <div className="w-full max-w-[540px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_100px_-20px_rgba(0,0,0,0.8)] border-x border-white/5">
+      {/* CADRE TABLETTE : 768px de large */}
+      <div className="w-full max-w-[768px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_80px_rgba(0,0,0,0.6)] border-x border-white/5">
         
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
+        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-8 py-4 shrink-0 z-50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <IconLogo className="w-8 h-8" />
-              <h1 className="text-xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
+            <div className="flex items-center gap-4">
+               <IconLogo className="w-10 h-10" />
+              <h1 className="text-2xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
             </div>
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-               <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">‹</button>
-               <span className="text-[11px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
-               <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="p-2 text-slate-400">›</button>
+            <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+               <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="px-3 py-1 text-xl text-slate-400 hover:text-indigo-600 transition-colors">‹</button>
+               <span className="text-xs font-black uppercase tracking-widest text-indigo-700 px-4">{MONTHS_FR[currentMonth]} {currentYear}</span>
+               <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="px-3 py-1 text-xl text-slate-400 hover:text-indigo-600 transition-colors">›</button>
             </div>
           </div>
         </header>
@@ -244,7 +244,7 @@ const App: React.FC = () => {
               variants={{ enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (dir: number) => ({ x: dir < 0 ? '100%' : '-100%', opacity: 0 }) }}
               initial="enter" animate="center" exit="exit"
               transition={{ type: "spring", stiffness: 350, damping: 35 }}
-              className="absolute inset-0 px-6 pt-4 pb-24 overflow-y-auto no-scrollbar"
+              className="absolute inset-0 px-8 pt-6 pb-28 overflow-y-auto no-scrollbar"
             >
               {activeView === 'DASHBOARD' && (
                 <Dashboard 
@@ -318,29 +318,34 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
 
-        <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="absolute bottom-24 right-8 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
+        {/* Bouton Plus : Replacé pour le format tablette */}
+        <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="absolute bottom-28 right-10 w-16 h-16 bg-slate-900 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-8 h-8" /></button>
 
-        <nav className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 flex justify-around items-center pt-2 pb-8 px-8 z-40">
-          <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Stats" />
+        {/* Nav : Plus de padding pour le format tablette */}
+        <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center pt-4 pb-10 px-12 z-40">
+          <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Tableau de bord" />
           <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" />
-          <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" />
-          <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Réglages" />
+          <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Charges fixes" />
+          <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Paramètres" />
         </nav>
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
         <AnimatePresence>
           {showWelcome && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[40px] w-full p-8 shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-center text-4xl">🌿</div>
-                <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight">Guide Zen</h2>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-12" onClick={() => setShowWelcome(false)}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[40px] w-full max-w-lg p-10 shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-center text-5xl">🌿</div>
+                <h2 className="text-3xl font-black text-center italic text-slate-800 tracking-tight">Bienvenue sur ZenBudget</h2>
                 <div className="space-y-4 text-slate-600">
-                   <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 flex gap-3"><span className="font-black text-indigo-600">0.</span><p className="text-xs font-bold text-indigo-900">Solde initial à ajouter dans le Journal.</p></div>
-                   <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Flux fixes dans l'onglet "Fixes".</p></div>
-                   <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Surveillez votre "Disponible Réel".</p></div>
-                   <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest mt-4">C'est parti !</button>
+                   <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-6 flex gap-4">
+                     <span className="font-black text-2xl text-indigo-600">0.</span>
+                     <p className="text-sm font-bold text-indigo-900 leading-relaxed">Pour démarrer, ajoutez votre solde bancaire actuel comme un revenu ponctuel dans le journal.</p>
+                   </div>
+                   <div className="flex gap-4 px-2 items-start"><span className="font-black text-indigo-600 text-lg">1.</span><p className="text-base font-medium">Gérez vos dépenses récurrentes pour une vision à long terme.</p></div>
+                   <div className="flex gap-4 px-2 items-start"><span className="font-black text-indigo-600 text-lg">2.</span><p className="text-base font-medium">Utilisez le "Disponible Réel" pour ne jamais être à découvert.</p></div>
                 </div>
+                <button onClick={() => setShowWelcome(false)} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all mt-6">Démarrer l'expérience</button>
               </motion.div>
             </motion.div>
           )}
@@ -351,9 +356,9 @@ const App: React.FC = () => {
 };
 
 const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
-    <div className="w-5 h-5">{icon}</div>
-    <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+  <button onClick={onClick} className={`flex flex-col items-center gap-2 transition-all hover:opacity-80 ${active ? 'text-indigo-600 scale-110' : 'text-slate-400'}`}>
+    <div className="w-6 h-6">{icon}</div>
+    <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
   </button>
 );
 
