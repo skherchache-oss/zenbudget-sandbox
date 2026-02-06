@@ -41,7 +41,6 @@ const App: React.FC = () => {
   // --- LOGIQUE BOUTON RETOUR ANDROID ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      // Si le modal est ouvert, on le ferme et on empêche le retour arrière de l'URL
       if (showAddModal) {
         setShowAddModal(false);
         setEditingTransaction(null);
@@ -49,7 +48,6 @@ const App: React.FC = () => {
     };
 
     if (showAddModal) {
-      // On pousse un état bidon dans l'historique quand on ouvre le modal
       window.history.pushState({ modalOpen: true }, '');
       window.addEventListener('popstate', handlePopState);
     }
@@ -324,52 +322,52 @@ const App: React.FC = () => {
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
-        {/* LE GUIDE ZEN */}
+        {/* LE GUIDE ZEN OPTIMISÉ POUR MOBILE (ÉVITE LE SCROLL) */}
         <AnimatePresence>
           {showWelcome && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
-              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-[40px] w-full max-w-lg p-8 shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-center text-5xl mb-4">🌿</div>
-                <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight mb-8">Bienvenue sur ZenBudget</h2>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowWelcome(false)}>
+              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-[32px] w-full max-w-lg p-5 sm:p-8 shadow-2xl overflow-y-auto max-h-[95vh] no-scrollbar" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-center text-4xl mb-2">🌿</div>
+                <h2 className="text-xl font-black text-center italic text-slate-800 tracking-tight mb-4">Bienvenue sur ZenBudget</h2>
                 
-                <div className="space-y-6">
-                   <div className="bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-5 flex gap-4">
-                     <span className="font-black text-xl text-indigo-600">0.</span>
-                     <p className="text-[13px] font-bold text-indigo-900 leading-relaxed">
-                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel aujourd'hui</span> dans le <span className="font-black">Journal</span>.
+                <div className="space-y-3">
+                   <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex gap-3">
+                     <span className="font-black text-lg text-indigo-600">0.</span>
+                     <p className="text-[12px] font-bold text-indigo-900 leading-tight">
+                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
                      </p>
                    </div>
 
-                   <div className="flex gap-4 px-2 items-start">
-                      <span className="font-black text-indigo-600 text-lg">1.</span>
-                      <p className="text-[13px] font-medium text-slate-600 leading-snug">
-                        Configurez vos flux fixes (loyer, abonnements...) dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span> ou <span className="font-bold text-slate-800">"Journal"</span>.
+                   <div className="flex gap-3 px-1 items-start">
+                      <span className="font-black text-indigo-600">1.</span>
+                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
+                        Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
                       </p>
                    </div>
 
-                   <div className="flex gap-4 px-2 items-start">
-                      <span className="font-black text-indigo-600 text-lg">2.</span>
-                      <p className="text-[13px] font-medium text-slate-600 leading-snug">
+                   <div className="flex gap-3 px-1 items-start">
+                      <span className="font-black text-indigo-600">2.</span>
+                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
                       </p>
                    </div>
 
-                   <div className="flex gap-4 px-2 items-start">
-                      <span className="font-black text-indigo-600 text-lg">3.</span>
-                      <p className="text-[13px] font-medium text-slate-600 leading-snug">
-                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> : c'est l'argent que vous pouvez dépenser sereinement pour éviter le découvert.
+                   <div className="flex gap-3 px-1 items-start">
+                      <span className="font-black text-indigo-600">3.</span>
+                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
+                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
                       </p>
                    </div>
 
-                   <div className="flex gap-4 px-2 items-start border-t border-slate-100 pt-4 mt-2">
-                      <span className="font-black text-indigo-600 text-lg">4.</span>
-                      <p className="text-[13px] font-medium text-slate-500 italic leading-snug">
-                        <span className="font-bold">Sauvegarde vs CSV</span> : utilisez l'Export Backup (Paramètres) pour restaurer votre budget. L'Export CSV (Board) est une lecture pour Excel.
+                   <div className="flex gap-3 px-1 items-start border-t border-slate-50 pt-2">
+                      <span className="font-black text-indigo-600">4.</span>
+                      <p className="text-[11px] font-medium text-slate-400 italic leading-tight">
+                        <span className="font-bold">Sauvegarde</span> : Export Backup (Paramètres) pour restaurer. Export CSV (Board) pour Excel.
                       </p>
                    </div>
                 </div>
 
-                <button onClick={() => setShowWelcome(false)} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all mt-8">
+                <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all mt-6">
                   Démarrer l'expérience
                 </button>
               </motion.div>
