@@ -52,12 +52,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   return (
-    <div className="fixed inset-0 w-full flex flex-col items-center justify-center bg-white sm:bg-slate-950 font-sans sm:bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] sm:from-slate-900 sm:via-slate-950 sm:to-black overflow-hidden">
+    /* Fond sombre avec dégradé, hauteur dynamique bloquée */
+    <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-slate-950 font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden px-5">
       
-      {/* Carte centrée et compactée */}
-      <div className="w-[90%] max-w-[400px] bg-white sm:bg-white/95 sm:backdrop-blur-2xl p-6 sm:p-10 rounded-[40px] sm:rounded-[50px] sm:shadow-[0_20px_50px_rgba(0,0,0,0.3)] sm:border sm:border-white/20 flex flex-col items-stretch overflow-hidden">
+      {/* Carte blanche centrée - On réduit les paddings sur mobile pour que tout tienne */}
+      <div className="w-full max-w-[400px] bg-white/95 backdrop-blur-2xl p-7 sm:p-10 rounded-[45px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/20 flex flex-col items-stretch relative">
         
-        <div className="w-16 h-16 bg-slate-900 rounded-[22px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0">
+        {/* Logo réduit pour gagner de la place */}
+        <div className="w-16 h-16 bg-slate-900 rounded-[24px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0">
           <IconLogo className="w-10 h-10 text-white" />
         </div>
         
@@ -66,11 +68,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
         </p>
         
         <h1 className="text-xl sm:text-2xl font-black tracking-tighter mb-2 italic text-slate-900 leading-none text-center">
-          {isLogin ? 'Ma Situation' : 'Créer un compte'}
+          {isLogin ? 'Ma Situation' : 'Créer un espace'}
         </h1>
         
-        <p className="text-slate-500 mb-6 text-xs font-medium leading-relaxed px-2 text-center">
-          {isLogin ? 'Retrouvez votre sérénité financière.' : 'Rejoignez ZenBudget en quelques secondes.'}
+        <p className="text-slate-500 mb-6 text-[11px] font-medium leading-relaxed px-4 text-center">
+          {isLogin ? 'Retrouvez votre sérénité financière.' : 'Rejoignez ZenBudget en un instant.'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3 mb-6">
@@ -80,7 +82,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               placeholder="Nom complet"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 transition-all shadow-inner"
+              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
               required
             />
           )}
@@ -89,7 +91,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 transition-all shadow-inner"
+            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
             required
           />
           <input
@@ -97,7 +99,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             placeholder="Mot de passe"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 transition-all shadow-inner"
+            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
             required
           />
 
@@ -110,7 +112,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-indigo-600 text-white rounded-[18px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[10px] uppercase tracking-[0.2em] disabled:opacity-50"
+            className="w-full py-4 bg-indigo-600 text-white rounded-[20px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[10px] uppercase tracking-[0.2em] disabled:opacity-50"
           >
             {loading ? 'Connexion...' : isLogin ? 'Se connecter' : 'Créer'}
           </button>
@@ -122,7 +124,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
             className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors mx-auto"
           >
-            {isLogin ? "Créer un compte" : "Se connecter"}
+            {isLogin ? "Nouveau ? Créer un compte" : "Déjà membre ? Connexion"}
           </button>
 
           <div className="flex items-center gap-3">
@@ -148,16 +150,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
           </button>
         </div>
 
+        {/* Bouton invité compacté */}
         <button 
           type="button"
           onClick={onLocalMode} 
-          className="mt-6 w-full py-3.5 bg-slate-900 text-white rounded-[18px] text-[9px] font-black uppercase tracking-[0.2em] shadow-lg hover:bg-slate-800 active:scale-95 transition-all"
+          className="mt-6 w-full py-3.5 bg-slate-900 text-white rounded-[18px] text-[9px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 active:scale-95 transition-all"
         >
-          Mode Invité
+          Continuer en Mode Invité
         </button>
       </div>
       
-      <p className="absolute bottom-6 text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em] opacity-60">
+      {/* Footer placé en dehors de la carte pour libérer de l'espace visuel */}
+      <p className="mt-6 text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] opacity-40">
         ZenBudget — Est. 2026
       </p>
     </div>
