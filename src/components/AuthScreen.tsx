@@ -60,7 +60,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
         {/* La carte blanche */}
         <div className="w-full bg-white/95 backdrop-blur-2xl p-10 sm:p-12 rounded-[50px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/20 flex flex-col justify-center transform transition-all">
           
-          {/* LOGO AGRANDI : w-20 au lieu de w-14 */}
+          {/* Logo agrandi */}
           <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0 mt-2">
             <IconLogo className="w-12 h-12 text-white" />
           </div>
@@ -69,12 +69,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">
                {isLogin ? getGreeting() : "Bienvenue"}
             </p>
-            {/* TITRE MODIFIÉ : ZenBudget */}
             <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic text-slate-900 leading-none">
               {isLogin ? 'ZenBudget' : 'Créer un espace'}
             </h1>
+            {/* Texte mis à jour : Retrouvez votre sérénité financière */}
             <p className="text-slate-400 text-[11px] font-medium leading-relaxed px-4">
-              {isLogin ? 'Retrouvez votre sérénité.' : 'Rejoignez ZenBudget.'}
+              {isLogin ? 'Retrouvez votre sérénité financière.' : 'Rejoignez ZenBudget.'}
             </p>
           </div>
 
