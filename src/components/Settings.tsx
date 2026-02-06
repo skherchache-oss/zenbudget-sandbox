@@ -160,15 +160,18 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       setIsUploading(true);
       try {
         const highQualityUrl = await compressHighQuality(file);
+        
+        // SAUVEGARDE LOCALE FORCÉE
+        localStorage.setItem(`user_photo_hd_${user.uid}`, highQualityUrl);
         onUpdateUser({ photoURL: highQualityUrl });
 
         const canvas = document.createElement('canvas');
-        canvas.width = 32; canvas.height = 32;
+        canvas.width = 40; canvas.height = 40; // Légèrement plus grand pour mobile
         const img = new Image();
         img.src = highQualityUrl;
         img.onload = async () => {
-           canvas.getContext('2d')?.drawImage(img, 0, 0, 32, 32);
-           const tiny = canvas.toDataURL('image/jpeg', 0.1);
+           canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
+           const tiny = canvas.toDataURL('image/jpeg', 0.2);
            try {
              await updateProfile(user, { photoURL: tiny });
            } catch (e) { }
@@ -189,6 +192,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     if (confirm("Supprimer la photo de profil ?")) {
       setIsUploading(true);
       try {
+        localStorage.removeItem(`user_photo_hd_${user.uid}`);
         await updateProfile(user, { photoURL: null });
         onUpdateUser({ photoURL: null });
       } catch (err) {
@@ -200,6 +204,9 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   };
 
   const isRealUser = user && user.uid !== 'local-user';
+  
+  // PRIORITÉ À L'IMAGE LOCALE HD
+  const currentPhoto = (user && localStorage.getItem(`user_photo_hd_${user.uid}`)) || state.user.photoURL;
 
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
@@ -207,21 +214,19 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           
-          {/* AVATAR CONTAINER */}
-          <div className="relative group cursor-pointer">
+          <div className="relative group">
             <div 
               onClick={() => photoInputRef.current?.click()}
-              className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl transition-all group-hover:ring-4 group-hover:ring-indigo-50 ${isUploading ? 'opacity-50' : ''}`}
+              className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl transition-all group-hover:ring-4 group-hover:ring-indigo-50 cursor-pointer ${isUploading ? 'opacity-50' : ''}`}
             >
-              {state.user.photoURL ? (
-                <img src={state.user.photoURL} alt="Profil" className="w-full h-full object-cover" />
+              {currentPhoto ? (
+                <img src={currentPhoto} alt="Profil" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl font-black text-indigo-600 uppercase">
                   {user?.displayName?.charAt(0) || 'Z'}
                 </span>
               )}
               
-              {/* Overlay au survol */}
               <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -235,11 +240,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               )}
             </div>
             
-            {/* BOUTON SUPPRIMER DISCRET (Petit badge en haut à droite) */}
-            {state.user.photoURL && !isUploading && (
+            {currentPhoto && !isUploading && (
               <button 
                 onClick={handleRemovePhoto}
-                className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all"
+                className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all z-10"
                 title="Supprimer la photo"
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -272,7 +276,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* Reste du fichier inchangé... */}
+      {/* Reste des sections (Aide, Mes Comptes, etc.) */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
