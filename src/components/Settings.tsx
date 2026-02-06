@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
-import { User as FirebaseUser } from 'firebase/auth';
+import { User as FirebaseUser, updateProfile } from 'firebase/auth';
 
 interface SettingsProps { 
   state: AppState; 
@@ -125,6 +125,25 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        if (user && user.uid !== 'local-user') {
+          try {
+            await updateProfile(user, { photoURL: base64 });
+            window.location.reload(); // Rechargement pour voir la nouvelle photo
+          } catch (err) {
+            console.error("Erreur mise à jour photo:", err);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const isRealUser = user && user.uid !== 'local-user';
 
   return ( 
@@ -152,7 +171,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
-            <input type="file" ref={photoInputRef} hidden accept="image/*" />
+            <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
 
           <div className="flex flex-col items-center w-full min-w-0">
