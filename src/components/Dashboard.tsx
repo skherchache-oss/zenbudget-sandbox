@@ -142,22 +142,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     maximumFractionDigits: 2 
   }).format(v);
 
-  // Déterminer le message de bienvenue
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Bonjour ✨";
-    if (hour < 18) return "Bel après-midi ☀️";
+    if (hour < 18) return "Bel après-midi 🌤️";
     return "Bonsoir 🌙";
   };
 
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* HEADER SECTION */}
       <div className="pt-6 flex justify-between items-end">
         <div className="flex flex-col" ref={menuRef}>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 mb-1">{getGreeting()}</p>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">Votre État Zen</h2>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">Ma Situation</h2>
           
           <div className="relative mt-3">
             <button 
@@ -197,11 +195,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      {/* MAIN CARDS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* BIG CARD : SOLDE */}
-        <div className="md:col-span-2 bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
           <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Solde en banque</span>
           <div className="flex items-baseline gap-2">
@@ -210,32 +205,31 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* AVAILABLE REAL */}
-        <div className={`p-6 rounded-[35px] shadow-xl flex flex-col justify-between min-h-[140px] transition-all ${availableBalance < 0 ? 'bg-rose-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/60 block">Disponible Réel</span>
-          <div>
-            <div className="text-2xl font-black text-white">{formatVal(availableBalance)}€</div>
-            <p className="text-[9px] text-white/40 font-bold uppercase mt-1">Après toutes charges</p>
-          </div>
-        </div>
-
-        {/* CARRY OVER */}
-        <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm flex flex-col justify-between min-h-[140px]">
-          <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block">Report Précédent</span>
-          <div className="flex items-center justify-between">
-            <div className={`text-2xl font-black ${carryOver >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-              {formatVal(carryOver)}€
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`p-6 rounded-[35px] shadow-xl flex flex-col justify-between min-h-[140px] transition-all ${availableBalance < 0 ? 'bg-rose-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/60 block">Disponible Réel</span>
+            <div>
+              <div className="text-2xl font-black text-white">{formatVal(availableBalance)}€</div>
+              <p className="text-[9px] text-white/40 font-bold uppercase mt-1">Après toutes charges</p>
             </div>
-            {carryOver !== 0 && (
-              <button onClick={handleApplyCarryOver} className="bg-slate-900 w-10 h-10 rounded-xl text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
-              </button>
-            )}
+          </div>
+
+          <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm flex flex-col justify-between min-h-[140px]">
+            <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block">Report Précédent</span>
+            <div className="flex items-center justify-between">
+              <div className={`text-2xl font-black ${carryOver >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {formatVal(carryOver)}€
+              </div>
+              {carryOver !== 0 && (
+                <button onClick={handleApplyCarryOver} className="bg-slate-900 w-10 h-10 rounded-xl text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* AI ADVICE */}
       <div className="bg-indigo-50/50 backdrop-blur-sm p-5 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-colors" onClick={() => !loadingAdvice && fetchAiAdvice()}>
         <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0">
           {loadingAdvice ? <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /> : "💡"}
@@ -246,7 +240,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* ANALYTICS SECTION */}
       <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
         <div className="flex flex-col items-center mb-10">
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
@@ -282,21 +275,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               </div>
-              {cat.notes.length > 0 && (
-                <div className="ml-16 mt-2 flex flex-wrap gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                  {cat.notes.map((note, i) => (
-                    <span key={i} className="text-[9px] font-bold px-2 py-1 bg-slate-50 text-slate-500 rounded-lg border border-slate-100 italic">
-                      {note}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* PROJECTION CARD */}
       <div className={`p-8 rounded-[40px] border-2 flex justify-between items-center transition-all ${projectedBalance < 0 ? 'bg-rose-50 border-rose-100' : 'bg-white border-slate-50 shadow-sm'}`}>
         <div>
           <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] block mb-1">Projection fin de mois</span>

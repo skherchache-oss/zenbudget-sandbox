@@ -19,11 +19,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Fonction pour une salutation dynamique selon l'heure
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Bonjour ✨";
-    if (hour < 18) return "Bel après-midi ☀️";
+    if (hour < 18) return "Bel après-midi 🌤️";
     return "Bonsoir 🌙";
   };
 
@@ -61,13 +60,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
           <IconLogo className="w-12 h-12 text-white" />
         </div>
         
-        {/* Utilisation de la fonction dynamique ici */}
         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 mb-2">
            {isLogin ? getGreeting() : "Bienvenue"}
         </p>
         
-        <h1 className="text-3xl font-black tracking-tighter mb-3 italic text-slate-900 leading-none">
-          {isLogin ? 'Votre État Zen' : 'Commencer l\'aventure'}
+        <h1 className="text-2xl font-black tracking-tighter mb-3 italic text-slate-900 leading-none">
+          {isLogin ? 'Ma Situation' : 'Commencer l\'aventure'}
         </h1>
         
         <p className="text-slate-500 mb-10 text-sm font-medium leading-relaxed px-4">
@@ -113,7 +111,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             disabled={loading}
             className="w-full py-5 bg-indigo-600 text-white rounded-[20px] font-black shadow-xl shadow-indigo-200 active:scale-95 hover:bg-indigo-700 transition-all text-xs uppercase tracking-[0.2em] disabled:opacity-50 mt-2"
           >
-            {loading ? 'Connexion...' : isLogin ? 'Accéder à mon Zen' : 'Créer mon espace'}
+            {loading ? 'Connexion...' : isLogin ? 'Accéder à mon budget' : 'Créer mon espace'}
           </button>
         </form>
 
