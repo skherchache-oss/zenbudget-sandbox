@@ -35,15 +35,20 @@ const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
 
-  const isDataReady = useRef(false);
-  const [isImporting, setIsImporting] = useState(false);
+  // VERROUS DE SÉCURITÉ
+  const [isInitializing, setIsInitializing] = useState(true);
+  const isImporting = useRef(false);
 
   // 1. Chargement initial et Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setAuthLoading(true);
       if (firebaseUser) {
+        console.log("🔑 Utilisateur détecté:", firebaseUser.email);
         const cloudData = await fetchUserData(firebaseUser);
+        
         if (cloudData && cloudData.accounts) {
+          console.log("📦 Données Cloud récupérées");
           setState({
             ...cloudData,
             user: {
@@ -59,23 +64,29 @@ const App: React.FC = () => {
         setFbUser(null);
         setState(getInitialState());
       }
+      
       setAuthLoading(false);
-      // On attend un peu que l'état soit bien stabilisé avant d'autoriser la sauvegarde auto
-      setTimeout(() => { isDataReady.current = true; }, 1500);
+      // On libère le verrou de sauvegarde après un court délai pour laisser le state se stabiliser
+      setTimeout(() => {
+        setIsInitializing(false);
+        console.log("🔓 Verrou de sauvegarde levé");
+      }, 1000);
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. Sauvegarde automatique (Déclenchée à chaque changement de 'state')
+  // 2. Sauvegarde automatique (Surveillée par le verrou)
   useEffect(() => {
-    // CONDITION : On ne sauvegarde pas si l'auth charge, si on importe, ou si les données ne sont pas prêtes
-    if (!isDataReady.current || authLoading || isImporting) return;
+    if (isInitializing || authLoading || isImporting.current) return;
 
+    // Sauvegarde locale
     saveState(state);
+    
+    // Sauvegarde Cloud
     if (fbUser && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, state);
     }
-  }, [state, fbUser, authLoading, isImporting]);
+  }, [state, fbUser, authLoading, isInitializing]);
 
   const activeAccount = useMemo(() => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
@@ -87,7 +98,6 @@ const App: React.FC = () => {
     return d;
   }, []);
 
-  // Logique Anti-Doublon
   const paidMarkers = useMemo(() => {
     if (!activeAccount) return new Set();
     return new Set(
@@ -101,7 +111,7 @@ const App: React.FC = () => {
   }, [activeAccount, currentMonth, currentYear]);
 
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
-    if (!activeAccount || isImporting) return 0;
+    if (!activeAccount) return 0;
     const normalizedTarget = new Date(targetDate);
     normalizedTarget.setHours(12, 0, 0, 0);
 
@@ -129,11 +139,11 @@ const App: React.FC = () => {
     return balance;
   };
 
-  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
-  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), false), [activeAccount, currentMonth, currentYear, isImporting]);
+  const projectedBalance = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth + 1, 0), true), [activeAccount, currentMonth, currentYear, paidMarkers]);
+  const carryOver = useMemo(() => getBalanceAtDate(new Date(currentYear, currentMonth, 0), false), [activeAccount, currentMonth, currentYear]);
 
   const effectiveTransactions = useMemo(() => {
-    if (!activeAccount || isImporting) return [];
+    if (!activeAccount) return [];
     const realOnes = activeAccount.transactions.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -155,12 +165,10 @@ const App: React.FC = () => {
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [activeAccount, currentMonth, currentYear, isImporting, paidMarkers]);
+  }, [activeAccount, currentMonth, currentYear, paidMarkers]);
 
-  // FONCTION CORRIGÉE : Sauvegarde Cloud forcée et attendue
+  // AJOUT TRANSACTION : Forçage Cloud pur
   const handleUpsertTransaction = async (t: Omit<Transaction, 'id'> & { id?: string }) => {
-    console.log("🚀 Tentative d'ajout d'opération...");
-    
     const accIndex = state.accounts.findIndex(a => a.id === state.activeAccountId);
     if (accIndex === -1) return;
 
@@ -183,24 +191,17 @@ const App: React.FC = () => {
     
     const newState = { ...state, accounts: nextAccounts };
     
-    try {
-      // 1. Mise à jour immédiate de l'interface
-      setState(newState);
-      setShowAddModal(false); 
-      setEditingTransaction(null);
+    // 1. Mise à jour locale (visuelle)
+    setState(newState);
+    setShowAddModal(false); 
+    setEditingTransaction(null);
 
-      // 2. Sauvegarde Locale
-      saveState(newState);
-
-      // 3. Sauvegarde Cloud avec attente (AWAIT)
-      if (fbUser && fbUser.uid !== 'local-user') {
-        console.log("☁️ Synchronisation Cloud en cours...");
-        await saveUserData(fbUser.uid, newState);
-        console.log("✅ Sauvegarde réussie sur Firebase !");
-      }
-    } catch (error) {
-      console.error("❌ Erreur lors de la sauvegarde :", error);
-      alert("Problème de connexion : l'opération n'a peut-être pas été sauvegardée sur le cloud.");
+    // 2. Sauvegarde immédiate forçée
+    saveState(newState);
+    if (fbUser && fbUser.uid !== 'local-user') {
+      console.log("☁️ Envoi forcé vers Firebase...");
+      await saveUserData(fbUser.uid, newState);
+      console.log("✅ Confirmé par Firebase.");
     }
   };
 
@@ -280,7 +281,7 @@ const App: React.FC = () => {
                 }}
                 onReset={async () => { 
                   if(confirm("Tout supprimer ?")) { 
-                    isDataReady.current = false;
+                    setIsInitializing(true);
                     const freshState = getInitialState();
                     localStorage.removeItem('zenbudget_state_v3');
                     if (fbUser) await saveUserData(fbUser.uid, freshState);
@@ -296,8 +297,8 @@ const App: React.FC = () => {
                   reader.onload = async (e) => { 
                     try { 
                       const imported = JSON.parse(e.target?.result as string);
-                      setIsImporting(true);
-                      isDataReady.current = false;
+                      isImporting.current = true;
+                      setIsInitializing(true);
                       const finalState = { ...imported, user: state.user };
                       setState(finalState);
                       if (fbUser) await saveUserData(fbUser.uid, finalState);
