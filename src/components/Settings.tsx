@@ -127,21 +127,29 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
-  // Nouvelle fonction pour compresser l'image afin d'éviter l'erreur URL too long de Firebase
   const compressImage = (base64Str: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.src = base64Str;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 100; // Taille miniature pour Firebase Auth
-        const scaleSize = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scaleSize;
+        // Firebase Auth photoURL est limité à ~2048 caractères.
+        // On force une taille minuscule (64x64) car c'est juste pour un avatar.
+        const SIZE = 64; 
+        canvas.width = SIZE;
+        canvas.height = SIZE;
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        // On compresse fortement car Firebase limite à ~2kb
-        resolve(canvas.toDataURL('image/jpeg', 0.5));
+        if (ctx) {
+          // On dessine en mode "cover" pour garder le ratio
+          const ratio = Math.max(SIZE / img.width, SIZE / img.height);
+          const x = (SIZE - img.width * ratio) / 2;
+          const y = (SIZE - img.height * ratio) / 2;
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, SIZE, SIZE);
+          ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
+        }
+        // JPEG à 0.4 de qualité produit une string Base64 très courte
+        resolve(canvas.toDataURL('image/jpeg', 0.4));
       };
     });
   };
@@ -152,18 +160,16 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       setIsUploading(true);
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64 = reader.result as string;
         try {
-          // Compression pour satisfaire les limites de Firebase Profile
-          const compressed = await compressImage(base64);
-          
+          const compressed = await compressImage(reader.result as string);
+          // Tentative de mise à jour du profil Firebase
           await updateProfile(user, { photoURL: compressed });
           onUpdateUser({ photoURL: compressed });
-          setIsUploading(false);
         } catch (err) {
           console.error("Erreur mise à jour photo:", err);
+          alert("L'image ne peut pas être enregistrée. Essayez un autre format.");
+        } finally {
           setIsUploading(false);
-          alert("L'image est trop lourde pour le profil. Essayez une image plus petite.");
         }
       };
       reader.readAsDataURL(file);
@@ -175,7 +181,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
-      {/* SECTION PROFIL / AUTH */}
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           <div className="relative">
@@ -230,7 +235,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* SECTION AIDE */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
@@ -244,7 +248,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* SECTION COMPTES */}
       <section> 
         <SectionTitle title="Mes Comptes" /> 
         <div className="space-y-1"> 
@@ -278,7 +281,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* CYCLE BUDGETAIRE */}
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
@@ -323,7 +325,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* SAUVEGARDE */}
       <section>
         <SectionTitle title="Sauvegarde" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
@@ -343,7 +344,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* DANGER ZONE */}
       <section className="pt-4 space-y-4"> 
         <div className="bg-slate-900 rounded-[32px] p-6 text-center relative overflow-hidden"> 
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full" /> 

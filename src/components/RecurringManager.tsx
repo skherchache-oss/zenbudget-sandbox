@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { RecurringTemplate, TransactionType, Category } from '../types';
 import { generateId } from '../store';
 import { IconPlus } from './Icons';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { MONTHS_FR } from '../constants';
 
 interface RecurringManagerProps {
   recurringTemplates: RecurringTemplate[];
@@ -110,19 +108,6 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
     <div className="space-y-6 pb-32 h-full overflow-y-auto no-scrollbar px-1">
       <div className="flex items-center justify-between px-1 mt-4">
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic">Flux Fixes</h2>
-      </div>
-
-      {/* SÉLECTEUR DE MOIS (AJOUTÉ POUR COHÉRENCE) */}
-      <div className="flex items-center justify-between bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
-        <button onClick={() => onMonthChange(-1)} className="p-2 bg-slate-50 rounded-xl text-slate-400">
-          <ChevronLeft size={18} />
-        </button>
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Impact sur {MONTHS_FR[month]}
-        </span>
-        <button onClick={() => onMonthChange(1)} className="p-2 bg-slate-50 rounded-xl text-slate-400">
-          <ChevronRight size={18} />
-        </button>
       </div>
 
       <div className="bg-indigo-600 rounded-[32px] p-6 shadow-xl text-white relative overflow-hidden mb-2">
