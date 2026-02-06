@@ -46,23 +46,25 @@ const fetchAiAdvice = async () => {
     if (!API_KEY || loadingAdvice) return;
     setLoadingAdvice(true);
     try {
-      // On tente la route v1beta avec le modèle flash
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+      // Test avec la route globale v1
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "Donne un conseil financier zen très court (max 60 caractères) en français, sans guillemets." }] }]
+          contents: [{ parts: [{ text: "Donne un conseil financier zen court en français." }] }]
         })
       });
       const data = await response.json();
-      if (data.error) {
-        setAiAdvice("Erreur API: " + data.error.message);
+      
+      // Affichage du résultat pour diagnostic
+      if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        setAiAdvice(data.candidates[0].content.parts[0].text.trim());
+      } else if (data.error) {
+        setAiAdvice("Détail : " + data.error.message);
       } else {
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        setAiAdvice(text?.trim() || "ZenTip : Respirez, votre budget est sous contrôle. ✨");
+        setAiAdvice("ZenTip : Respirez, votre budget est sous contrôle. ✨");
       }
     } catch (err) {
-      console.error("Erreur Fetch:", err);
       setAiAdvice("ZenTip : Respirez, votre budget est sous contrôle. ✨");
     } finally {
       setLoadingAdvice(false);
