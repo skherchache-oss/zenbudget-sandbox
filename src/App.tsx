@@ -32,16 +32,13 @@ const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<string>(new Date().toISOString());
   const [selectedDay, setSelectedDay] = useState<number | null>(new Date().getDate());
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false); // État pour la feuille verte
   const [viewDirection, setViewDirection] = useState(0);
 
-  // VERROUS DE SÉCURITÉ
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
 
-  const sanitizeForFirebase = (obj: any): any => {
-    return JSON.parse(JSON.stringify(obj));
-  };
+  const sanitizeForFirebase = (obj: any): any => JSON.parse(JSON.stringify(obj));
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -58,6 +55,9 @@ const App: React.FC = () => {
               photoURL: firebaseUser.photoURL || null 
             }
           });
+        } else {
+          // Si c'est une première connexion, on affiche la feuille verte
+          setShowWelcome(true);
         }
         setFbUser(firebaseUser);
       } else {
@@ -104,13 +104,11 @@ const App: React.FC = () => {
     if (!activeAccount) return 0;
     const normalizedTarget = new Date(targetDate);
     normalizedTarget.setHours(12, 0, 0, 0);
-
     let balance = activeAccount.transactions.reduce((acc, t) => {
       const tDate = new Date(t.date);
       tDate.setHours(12, 0, 0, 0); 
       return tDate <= normalizedTarget ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
-
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
@@ -190,7 +188,7 @@ const App: React.FC = () => {
   };
 
   if (authLoading) return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
-  if (!fbUser) return <AuthScreen onLocalMode={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} />;
+  if (!fbUser) return <AuthScreen onLocalMode={() => { setFbUser({ uid: 'local-user', displayName: 'Invité' } as any); setShowWelcome(true); }} />;
 
   return (
     <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
@@ -202,11 +200,10 @@ const App: React.FC = () => {
                <IconLogo className="w-8 h-8" />
               <h1 className="text-xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
             </div>
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-               <button onClick={() => { setSlideDirection('prev'); let m = currentMonth - 1; let y = currentYear; if(m<0){m=11;y--} setCurrentMonth(m); setCurrentYear(y); }} className="px-2 py-1 text-lg text-slate-400 hover:text-indigo-600 transition-colors">‹</button>
-               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700 px-2">{MONTHS_FR[currentMonth]} {currentYear}</span>
-               <button onClick={() => { setSlideDirection('next'); let m = currentMonth + 1; let y = currentYear; if(m>11){m=0;y++} setCurrentMonth(m); setCurrentYear(y); }} className="px-2 py-1 text-lg text-slate-400 hover:text-indigo-600 transition-colors">›</button>
-            </div>
+            {/* Bouton Info pour rouvrir la feuille verte */}
+            <button onClick={() => setShowWelcome(true)} className="text-slate-300 hover:text-indigo-500 transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </button>
           </div>
         </header>
 
@@ -277,9 +274,7 @@ const App: React.FC = () => {
                         const imported = JSON.parse(e.target?.result as string);
                         isImporting.current = true;
                         setIsInitializing(true);
-                        const finalState = { ...imported, user: state.user };
-                        setState(finalState);
-                        if (fbUser) await saveUserData(fbUser.uid, sanitizeForFirebase(finalState));
+                        setState({ ...imported, user: state.user });
                         alert("Import réussi !");
                         window.location.reload();
                       } catch (err) { alert("Fichier invalide"); } 
@@ -294,7 +289,6 @@ const App: React.FC = () => {
 
         <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="absolute bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-2xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-7 h-7" /></button>
 
-        {/* NAVIGATION CORRIGÉE : Utilisation de grid-cols-4 et textes adaptatifs */}
         <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 grid grid-cols-4 items-center pt-3 pb-8 px-2 z-40">
           <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Bord" fullLabel="Tableau de bord" />
           <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" fullLabel="Journal" />
@@ -303,12 +297,32 @@ const App: React.FC = () => {
         </nav>
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
+        
+        {/* LE GUIDE ZEN - LA FEUILLE VERTE */}
+        <AnimatePresence>
+          {showWelcome && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-8" onClick={() => setShowWelcome(false)}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[40px] w-full max-w-lg p-8 shadow-2xl space-y-6" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-center text-5xl">🌿</div>
+                <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight">Bienvenue sur ZenBudget</h2>
+                <div className="space-y-4 text-slate-600">
+                   <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-5 flex gap-4">
+                     <span className="font-black text-xl text-indigo-600">0.</span>
+                     <p className="text-xs font-bold text-indigo-900 leading-relaxed">Pour démarrer, ajoutez votre solde bancaire actuel comme un revenu ponctuel dans le journal.</p>
+                   </div>
+                   <div className="flex gap-4 px-2 items-start"><span className="font-black text-indigo-600 text-base">1.</span><p className="text-sm font-medium">Gérez vos dépenses récurrentes pour une vision à long terme.</p></div>
+                   <div className="flex gap-4 px-2 items-start"><span className="font-black text-indigo-600 text-base">2.</span><p className="text-sm font-medium">Utilisez le "Disponible Réel" pour ne jamais être à découvert.</p></div>
+                </div>
+                <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all mt-4">Démarrer l'expérience</button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 };
 
-// COMPOSANT NavBtn CORRIGÉ
 const NavBtn: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; fullLabel: string }> = ({ active, onClick, icon, label, fullLabel }) => (
   <button onClick={onClick} className={`flex flex-col items-center justify-center gap-1 transition-all ${active ? 'text-indigo-600' : 'text-slate-400'}`}>
     <div className={`w-5 h-5 transition-transform ${active ? 'scale-110' : 'scale-100'}`}>{icon}</div>
