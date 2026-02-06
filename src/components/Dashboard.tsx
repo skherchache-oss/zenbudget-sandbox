@@ -1,8 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Transaction, Category, BudgetAccount } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-// Utilisation de la bibliothèque standard stable pour éviter les erreurs de build
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -30,7 +28,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fermer le menu si on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -41,7 +38,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-const fetchAiAdvice = async () => {
+  const fetchAiAdvice = async () => {
     const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
     if (!API_KEY || loadingAdvice) return;
     setLoadingAdvice(true);
@@ -54,10 +51,7 @@ const fetchAiAdvice = async () => {
           contents: [{ parts: [{ text: "Donne un conseil financier zen très court (max 60 caractères) en français." }] }]
         })
       });
-      
       const data = await response.json();
-      
-      // Si l'IA répond, on met son message. Sinon, on garde la phrase zen.
       if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
         setAiAdvice(data.candidates[0].content.parts[0].text.trim());
       } else {
@@ -148,37 +142,46 @@ const fetchAiAdvice = async () => {
     maximumFractionDigits: 2 
   }).format(v);
 
+  // Déterminer le message de bienvenue
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bonjour ✨";
+    if (hour < 18) return "Bel après-midi ☀️";
+    return "Bonsoir 🌙";
+  };
+
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
-      <div className="pt-6 flex justify-between items-start relative">
+      
+      {/* HEADER SECTION */}
+      <div className="pt-6 flex justify-between items-end">
         <div className="flex flex-col" ref={menuRef}>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tighter italic leading-none">Bilan Zen ✨</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 mb-1">{getGreeting()}</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">Votre État Zen</h2>
           
-          <div className="relative mt-2">
+          <div className="relative mt-3">
             <button 
               onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
-              className="flex items-center gap-2 group focus:outline-none"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
             >
-              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-indigo-500 group-active:opacity-60 transition-all whitespace-nowrap">
+              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
                 {activeAccount.name}
               </span>
               {allAccounts.length > 1 && (
-                <svg className={`w-3 h-3 text-indigo-400 transition-transform duration-300 ${isAccountMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-3 h-3 text-slate-400 transition-transform duration-300 ${isAccountMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                 </svg>
               )}
             </button>
 
             {isAccountMenuOpen && (
-              <div className="absolute left-0 mt-2 w-max min-w-[140px] bg-white border border-slate-100 rounded-2xl shadow-xl z-[100] overflow-hidden fade-in py-1">
+              <div className="absolute left-0 mt-2 w-max min-w-[180px] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden fade-in py-1">
                 {allAccounts.map(acc => (
                   <button
                     key={acc.id}
-                    onClick={() => {
-                      onSwitchAccount(acc.id);
-                      setIsAccountMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-colors
+                    onClick={() => { onSwitchAccount(acc.id); setIsAccountMenuOpen(false); }}
+                    className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors
                       ${acc.id === activeAccount.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
                   >
                     {acc.name}
@@ -189,81 +192,100 @@ const fetchAiAdvice = async () => {
           </div>
         </div>
 
-        <button 
-          onClick={handleExportCSV} 
-          className="p-3 bg-white border border-slate-50 rounded-2xl shadow-sm text-indigo-600 active:scale-95 transition-all flex items-center gap-2"
-        >
-          <span className="text-[9px] font-black uppercase tracking-widest">EXPORT CSV</span>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+        <button onClick={handleExportCSV} className="w-12 h-12 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-all active:scale-90 group">
+          <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
         </button>
       </div>
 
-      <div className="bg-slate-900 px-6 py-9 rounded-[40px] shadow-2xl relative overflow-hidden flex flex-col justify-center">
-        <span className="text-indigo-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Solde Bancaire Actuel</span>
-        <div className="text-4xl font-black tracking-tighter text-white">{formatVal(checkingAccountBalance)} €</div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className={`p-5 rounded-[32px] shadow-lg ${availableBalance < 0 ? 'bg-rose-500' : 'bg-indigo-600'}`}>
-          <span className="text-[8px] font-black uppercase tracking-widest block mb-1 text-white/70">Disponible Réel</span>
-          <div className="text-xl font-black text-white">{formatVal(availableBalance)}€</div>
+      {/* MAIN CARDS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        {/* BIG CARD : SOLDE */}
+        <div className="md:col-span-2 bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
+          <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Solde en banque</span>
+          <div className="flex items-baseline gap-2">
+            <div className="text-5xl font-black tracking-tighter text-white">{formatVal(checkingAccountBalance)}</div>
+            <span className="text-2xl font-bold text-indigo-400">€</span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-between">
-          <span className="text-slate-400 text-[8px] font-black uppercase tracking-widest block mb-1">Report Précédent</span>
-          <div className={`text-xl font-black flex items-center justify-between ${carryOver >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {formatVal(carryOver)}€
+
+        {/* AVAILABLE REAL */}
+        <div className={`p-6 rounded-[35px] shadow-xl flex flex-col justify-between min-h-[140px] transition-all ${availableBalance < 0 ? 'bg-rose-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/60 block">Disponible Réel</span>
+          <div>
+            <div className="text-2xl font-black text-white">{formatVal(availableBalance)}€</div>
+            <p className="text-[9px] text-white/40 font-bold uppercase mt-1">Après toutes charges</p>
+          </div>
+        </div>
+
+        {/* CARRY OVER */}
+        <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm flex flex-col justify-between min-h-[140px]">
+          <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest block">Report Précédent</span>
+          <div className="flex items-center justify-between">
+            <div className={`text-2xl font-black ${carryOver >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {formatVal(carryOver)}€
+            </div>
             {carryOver !== 0 && (
-              <button onClick={handleApplyCarryOver} className="bg-indigo-50 p-1.5 rounded-lg text-indigo-600">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path d="M12 4v16m8-8H4" /></svg>
+              <button onClick={handleApplyCarryOver} className="bg-slate-900 w-10 h-10 rounded-xl text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
               </button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-md p-5 rounded-[28px] flex items-center gap-4 border border-white shadow-sm cursor-pointer" onClick={() => !loadingAdvice && fetchAiAdvice()}>
-        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl shrink-0">
-          {loadingAdvice ? "..." : "💡"}
+      {/* AI ADVICE */}
+      <div className="bg-indigo-50/50 backdrop-blur-sm p-5 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-colors" onClick={() => !loadingAdvice && fetchAiAdvice()}>
+        <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0">
+          {loadingAdvice ? <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /> : "💡"}
         </div>
-        <p className="text-[11px] font-bold text-slate-700 leading-tight">{aiAdvice}</p>
+        <div>
+          <p className="text-[9px] font-black uppercase text-indigo-400 tracking-widest mb-0.5">Conseil de l'IA</p>
+          <p className="text-[12px] font-bold text-slate-700 leading-snug italic">"{aiAdvice}"</p>
+        </div>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-xl rounded-[40px] p-6 border border-white shadow-xl">
-        <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 text-center">Répartition & Détails</h2>
-        <div className="h-[180px] w-full relative mb-8">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={categorySummary} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
-                {categorySummary.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[10px] font-black uppercase text-slate-400">Total Dépenses</span>
-            <span className="text-xl font-black text-slate-900">{formatVal(stats.expenses)}€</span>
+      {/* ANALYTICS SECTION */}
+      <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
+        <div className="flex flex-col items-center mb-10">
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
+          <div className="h-[220px] w-full relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={categorySummary} innerRadius={75} outerRadius={95} paddingAngle={10} dataKey="value" stroke="none">
+                  {categorySummary.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} cornerRadius={10} />)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Dépenses totales</span>
+              <span className="text-3xl font-black text-slate-900">{formatVal(stats.expenses)}€</span>
+            </div>
           </div>
         </div>
-        <div className="space-y-4">
+
+        <div className="grid grid-cols-1 gap-5">
           {categorySummary.map((cat) => (
-            <div key={cat.id}>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-50" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
+            <div key={cat.id} className="group">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-50 transition-transform group-hover:scale-110" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
                   {cat.icon}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-black uppercase text-slate-800 truncate">{cat.name}</span>
+                <div className="flex-1">
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-[11px] font-black uppercase text-slate-800 tracking-tight">{cat.name}</span>
                     <span className="text-[13px] font-black text-slate-900">{formatVal(cat.value)}€</span>
                   </div>
-                  <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${cat.percent}%`, backgroundColor: cat.color }} />
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${cat.percent}%`, backgroundColor: cat.color }} />
                   </div>
                 </div>
               </div>
               {cat.notes.length > 0 && (
-                <div className="ml-16 flex flex-wrap gap-2">
+                <div className="ml-16 mt-2 flex flex-wrap gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                   {cat.notes.map((note, i) => (
-                    <span key={i} className="text-[9px] font-medium px-2 py-1 bg-slate-50 text-slate-500 rounded-lg border border-slate-100 italic truncate max-w-[150px]">
+                    <span key={i} className="text-[9px] font-bold px-2 py-1 bg-slate-50 text-slate-500 rounded-lg border border-slate-100 italic">
                       {note}
                     </span>
                   ))}
@@ -274,10 +296,16 @@ const fetchAiAdvice = async () => {
         </div>
       </div>
 
-      <div className={`p-5 rounded-[32px] border-2 flex justify-between items-center ${projectedBalance < 0 ? 'bg-rose-50 border-rose-100' : 'bg-white border-slate-50'}`}>
+      {/* PROJECTION CARD */}
+      <div className={`p-8 rounded-[40px] border-2 flex justify-between items-center transition-all ${projectedBalance < 0 ? 'bg-rose-50 border-rose-100' : 'bg-white border-slate-50 shadow-sm'}`}>
         <div>
-          <span className="text-slate-400 text-[8px] font-black uppercase tracking-widest block mb-1">Projection Fin de Mois</span>
-          <div className={`text-2xl font-black ${projectedBalance >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatVal(projectedBalance)}€</div>
+          <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] block mb-1">Projection fin de mois</span>
+          <div className={`text-3xl font-black tracking-tighter ${projectedBalance >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
+            {formatVal(projectedBalance)} €
+          </div>
+        </div>
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${projectedBalance >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+          {projectedBalance >= 0 ? "📈" : "⚠️"}
         </div>
       </div>
     </div>
