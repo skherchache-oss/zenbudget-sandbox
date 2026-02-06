@@ -1,6 +1,9 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Transaction, Category, BudgetAccount } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -16,17 +19,23 @@ interface DashboardProps {
   projectedBalance: number;
   carryOver: number;
   onAddTransaction: (t: Omit<Transaction, 'id'>) => void;
+  // Ajout des fonctions de changement de mois si elles sont gérées par le parent
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   transactions, categories, activeAccount, allAccounts,
   onSwitchAccount, checkingAccountBalance, availableBalance, projectedBalance, carryOver,
-  onAddTransaction, month, year 
+  onAddTransaction, month, year, onPrevMonth, onNextMonth
 }) => {
   const [aiAdvice, setAiAdvice] = useState<string>("Analyse financière Zen...");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Date formatée pour le titre
+  const currentDate = new Date(year, month);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -126,17 +135,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     link.click();
   };
 
-  const handleApplyCarryOver = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAddTransaction({
-      amount: Math.abs(carryOver),
-      type: carryOver >= 0 ? 'INCOME' : 'EXPENSE',
-      categoryId: 'carry-over',
-      comment: `Report du mois précédent`,
-      date: new Date(year, month, 1, 12).toISOString(),
-    });
-  };
-
   const formatVal = (v: number) => new Intl.NumberFormat('fr-FR', { 
     minimumFractionDigits: 2,
     maximumFractionDigits: 2 
@@ -152,13 +150,23 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* HEADER REORGANISE */}
+      {/* HEADER AVEC SÉLECTEUR DE MOIS RESTAURÉ */}
       <div className="pt-4 flex justify-between items-start">
-        <div className="flex flex-col" ref={menuRef}>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 mb-1">{getGreeting()}</p>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">Ma Situation</h2>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 mb-1">
+            <button onClick={onPrevMonth} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+              <ChevronLeft className="w-4 h-4 text-slate-400" />
+            </button>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 capitalize">
+              {format(currentDate, 'MMMM yyyy', { locale: fr })}
+            </span>
+            <button onClick={onNextMonth} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">ZenBudget</h2>
           
-          <div className="relative mt-3">
+          <div className="relative mt-3" ref={menuRef}>
             <button 
               onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
               className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
@@ -191,7 +199,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* BOUTON EXPORT CSV EN HAUT A DROITE */}
         <button 
           onClick={handleExportCSV} 
           className="flex flex-col items-center gap-1 group transition-all"
@@ -230,11 +237,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className={`text-2xl font-black ${carryOver >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                 {formatVal(carryOver)}€
               </div>
-              {carryOver !== 0 && (
-                <button onClick={handleApplyCarryOver} className="bg-slate-900 w-10 h-10 rounded-xl text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
-                </button>
-              )}
+              {/* LE BOUTON + A ÉTÉ SUPPRIMÉ POUR ÉVITER LES DOUBLONS DE CALCUL */}
             </div>
           </div>
         </div>

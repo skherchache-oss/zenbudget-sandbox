@@ -38,6 +38,25 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
 
+  // --- LOGIQUE DE CHANGEMENT DE MOIS ---
+  const changeMonth = (offset: number) => {
+    setSlideDirection(offset > 0 ? 'next' : 'prev');
+    let nextMonth = currentMonth + offset;
+    let nextYear = currentYear;
+
+    if (nextMonth > 11) {
+      nextMonth = 0;
+      nextYear++;
+    } else if (nextMonth < 0) {
+      nextMonth = 11;
+      nextYear--;
+    }
+
+    setCurrentMonth(nextMonth);
+    setCurrentYear(nextYear);
+    setSelectedDay(null); // Reset la sélection du jour au changement de mois
+  };
+
   // --- LOGIQUE BOUTON RETOUR ANDROID ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -62,7 +81,6 @@ const App: React.FC = () => {
     if (date) setModalInitialDate(date);
     setShowAddModal(true);
   };
-  // -------------------------------------
 
   const sanitizeForFirebase = (obj: any): any => JSON.parse(JSON.stringify(obj));
 
@@ -247,6 +265,9 @@ const App: React.FC = () => {
                   onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
                   availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 26), true)} projectedBalance={projectedBalance} carryOver={carryOver}
                   onAddTransaction={handleUpsertTransaction}
+                  // RESTAURATION DES FONCTIONS DE MOIS POUR LE BOARD
+                  onPrevMonth={() => changeMonth(-1)}
+                  onNextMonth={() => changeMonth(1)}
                 />
               )}
               {activeView === 'TRANSACTIONS' && (
@@ -256,7 +277,9 @@ const App: React.FC = () => {
                   onEdit={(t) => openAddModal(undefined, t)}
                   onAddAtDate={(date) => openAddModal(date)}
                   selectedDay={selectedDay} onSelectDay={setSelectedDay} totalBalance={projectedBalance} carryOver={carryOver} cycleEndDay={activeAccount?.cycleEndDay || 0}
-                  onMonthChange={() => {}} slideDirection={slideDirection}
+                  // RESTAURATION DU CHANGEMENT DE MOIS POUR LE JOURNAL
+                  onMonthChange={(offset) => changeMonth(offset)} 
+                  slideDirection={slideDirection}
                 />
               )}
               {activeView === 'RECURRING' && (
@@ -334,7 +357,7 @@ const App: React.FC = () => {
                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex gap-3">
                      <span className="font-black text-lg text-indigo-600">0.</span>
                      <p className="text-[12px] font-bold text-indigo-900 leading-tight">
-                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
+                       Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
                      </p>
                    </div>
 
