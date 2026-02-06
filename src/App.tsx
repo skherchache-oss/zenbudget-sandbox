@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { AppState, ViewType, Transaction, BudgetAccount } from './types';
+import { AppState, ViewType, Transaction } from './types';
 import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
@@ -54,7 +54,7 @@ const App: React.FC = () => {
 
     setCurrentMonth(nextMonth);
     setCurrentYear(nextYear);
-    setSelectedDay(null); // Reset la sélection du jour au changement de mois
+    setSelectedDay(null);
   };
 
   // --- LOGIQUE BOUTON RETOUR ANDROID ---
@@ -65,15 +65,11 @@ const App: React.FC = () => {
         setEditingTransaction(null);
       }
     };
-
     if (showAddModal) {
       window.history.pushState({ modalOpen: true }, '');
       window.addEventListener('popstate', handlePopState);
     }
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [showAddModal]);
 
   const openAddModal = (date?: string, editItem?: Transaction | null) => {
@@ -265,7 +261,6 @@ const App: React.FC = () => {
                   onViewTransactions={() => handleViewChange('TRANSACTIONS')} checkingAccountBalance={getBalanceAtDate(now, false)} 
                   availableBalance={getBalanceAtDate(new Date(currentYear, currentMonth, activeAccount?.cycleEndDay || 26), true)} projectedBalance={projectedBalance} carryOver={carryOver}
                   onAddTransaction={handleUpsertTransaction}
-                  // RESTAURATION DES FONCTIONS DE MOIS POUR LE BOARD
                   onPrevMonth={() => changeMonth(-1)}
                   onNextMonth={() => changeMonth(1)}
                 />
@@ -277,7 +272,6 @@ const App: React.FC = () => {
                   onEdit={(t) => openAddModal(undefined, t)}
                   onAddAtDate={(date) => openAddModal(date)}
                   selectedDay={selectedDay} onSelectDay={setSelectedDay} totalBalance={projectedBalance} carryOver={carryOver} cycleEndDay={activeAccount?.cycleEndDay || 0}
-                  // RESTAURATION DU CHANGEMENT DE MOIS POUR LE JOURNAL
                   onMonthChange={(offset) => changeMonth(offset)} 
                   slideDirection={slideDirection}
                 />
@@ -287,6 +281,9 @@ const App: React.FC = () => {
                   recurringTemplates={activeAccount?.recurringTemplates || []} categories={state.categories}
                   onUpdate={(templates) => setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === activeAccount.id ? { ...a, recurringTemplates: templates } : a) }))}
                   totalBalance={projectedBalance}
+                  month={currentMonth}
+                  year={currentYear}
+                  onMonthChange={(offset) => changeMonth(offset)}
                 />
               )}
               {activeView === 'SETTINGS' && (
@@ -345,7 +342,6 @@ const App: React.FC = () => {
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
-        {/* LE GUIDE ZEN OPTIMISÉ POUR MOBILE (ÉVITE LE SCROLL) */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowWelcome(false)}>
@@ -360,32 +356,16 @@ const App: React.FC = () => {
                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
                      </p>
                    </div>
-
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">1.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
                       </p>
                    </div>
-
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">2.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
-                      </p>
-                   </div>
-
-                   <div className="flex gap-3 px-1 items-start">
-                      <span className="font-black text-indigo-600">3.</span>
-                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
-                      </p>
-                   </div>
-
-                   <div className="flex gap-3 px-1 items-start border-t border-slate-50 pt-2">
-                      <span className="font-black text-indigo-600">4.</span>
-                      <p className="text-[11px] font-medium text-slate-400 italic leading-tight">
-                        <span className="font-bold">Sauvegarde</span> : Export Backup (Paramètres) pour restaurer. Export CSV (Board) pour Excel.
                       </p>
                    </div>
                 </div>

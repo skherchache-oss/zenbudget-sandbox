@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, Category } from '../types';
 import { MONTHS_FR } from '../constants';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -27,12 +28,9 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-// Formatteur spécifique pour le calendrier afin d'optimiser l'espace horizontal
 const formatCurrencyCalendar = (amount: number) => {
   const absAmount = Math.abs(amount);
-  // Stratégie UX : Si le montant est ≥ 1000, on supprime les décimales pour gagner de la place
   const hideDecimals = absAmount >= 1000;
-  
   return new Intl.NumberFormat('fr-FR', {
     style: 'decimal',
     minimumFractionDigits: hideDecimals ? 0 : 2,
@@ -126,13 +124,24 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
       <div className="flex items-center justify-between px-1">
         <h2 className="text-xl font-black tracking-tighter text-slate-800">Journal</h2>
         <div className="bg-slate-900 rounded-xl px-2.5 py-1.5 flex items-center gap-2 shadow-lg">
-           <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
-             Fin de mois
-           </span>
+           <span className="text-[7px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Fin de mois</span>
            <span className={`text-[12px] font-black ${totalBalance >= 0 ? 'text-indigo-400' : 'text-red-400'} whitespace-nowrap`}>
              {formatCurrency(totalBalance)}€
            </span>
         </div>
+      </div>
+
+      {/* SÉLECTEUR DE MOIS (AJOUTÉ) */}
+      <div className="flex items-center justify-between bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
+        <button onClick={() => onMonthChange(-1)} className="p-2 bg-slate-50 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors">
+          <ChevronLeft size={18} />
+        </button>
+        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-800">
+          {MONTHS_FR[month]} {year}
+        </span>
+        <button onClick={() => onMonthChange(1)} className="p-2 bg-slate-50 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors">
+          <ChevronRight size={18} />
+        </button>
       </div>
 
       <div className="flex bg-slate-100 p-1 rounded-xl shadow-inner mb-1">

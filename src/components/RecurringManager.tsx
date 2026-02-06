@@ -1,14 +1,18 @@
-
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RecurringTemplate, TransactionType, Category } from '../types';
 import { generateId } from '../store';
 import { IconPlus } from './Icons';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { MONTHS_FR } from '../constants';
 
 interface RecurringManagerProps {
   recurringTemplates: RecurringTemplate[];
   categories: Category[];
   onUpdate: (templates: RecurringTemplate[]) => void;
   totalBalance: number;
+  month: number;
+  year: number;
+  onMonthChange: (offset: number) => void;
 }
 
 const RecurringItem: React.FC<{
@@ -64,7 +68,7 @@ const RecurringItem: React.FC<{
   );
 };
 
-const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates, categories, onUpdate, totalBalance }) => {
+const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates, categories, onUpdate, totalBalance, month, year, onMonthChange }) => {
   const [editingTpl, setEditingTpl] = useState<RecurringTemplate | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
@@ -108,7 +112,19 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic">Flux Fixes</h2>
       </div>
 
-      {/* ENCADRÉ BLEU TOTAL CHARGES RÉCURRENTES */}
+      {/* SÉLECTEUR DE MOIS (AJOUTÉ POUR COHÉRENCE) */}
+      <div className="flex items-center justify-between bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
+        <button onClick={() => onMonthChange(-1)} className="p-2 bg-slate-50 rounded-xl text-slate-400">
+          <ChevronLeft size={18} />
+        </button>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          Impact sur {MONTHS_FR[month]}
+        </span>
+        <button onClick={() => onMonthChange(1)} className="p-2 bg-slate-50 rounded-xl text-slate-400">
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
       <div className="bg-indigo-600 rounded-[32px] p-6 shadow-xl text-white relative overflow-hidden mb-2">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
         <div className="relative z-10">
