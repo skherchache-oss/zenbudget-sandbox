@@ -127,6 +127,25 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
+  // Nouvelle fonction pour compresser l'image afin d'éviter l'erreur URL too long de Firebase
+  const compressImage = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 100; // Taille miniature pour Firebase Auth
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // On compresse fortement car Firebase limite à ~2kb
+        resolve(canvas.toDataURL('image/jpeg', 0.5));
+      };
+    });
+  };
+
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && user && user.uid !== 'local-user') {
@@ -135,17 +154,16 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       reader.onloadend = async () => {
         const base64 = reader.result as string;
         try {
-          // 1. Mettre à jour Firebase Auth
-          await updateProfile(user, { photoURL: base64 });
+          // Compression pour satisfaire les limites de Firebase Profile
+          const compressed = await compressImage(base64);
           
-          // 2. Mettre à jour l'état global immédiatement
-          onUpdateUser({ photoURL: base64 });
-          
+          await updateProfile(user, { photoURL: compressed });
+          onUpdateUser({ photoURL: compressed });
           setIsUploading(false);
         } catch (err) {
           console.error("Erreur mise à jour photo:", err);
           setIsUploading(false);
-          alert("Erreur lors de la mise à jour de la photo");
+          alert("L'image est trop lourde pour le profil. Essayez une image plus petite.");
         }
       };
       reader.readAsDataURL(file);
