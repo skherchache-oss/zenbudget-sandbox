@@ -127,8 +127,9 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  // NOUVELLE LOGIQUE : Haute qualité stockée en local
+  const compressHighQuality = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
@@ -136,58 +137,55 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          // 128x128 offre une bien meilleure netteté que 64x64
-          const SIZE = 128;
+          // 512px = Très net sur Desktop
+          const SIZE = 512;
           canvas.width = SIZE;
           canvas.height = SIZE;
           const ctx = canvas.getContext('2d');
-          if (!ctx) return reject("Canvas error");
-
-          // Remplissage fond blanc (pour éviter la transparence noire en JPEG)
-          ctx.fillStyle = "white";
-          ctx.fillRect(0, 0, SIZE, SIZE);
-
-          // Calcul pour centrer l'image (Object-fit cover)
-          const ratio = Math.max(SIZE / img.width, SIZE / img.height);
-          const x = (SIZE - img.width * ratio) / 2;
-          const y = (SIZE - img.height * ratio) / 2;
-          ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
-
-          // Test qualité WebP (plus efficace)
-          let quality = 0.6;
-          let dataUrl = canvas.toDataURL('image/webp', quality);
-
-          // Si WebP n'est pas supporté ou trop long (> 2048 caractères)
-          if (dataUrl.length > 2000 || dataUrl.startsWith('data:image/png')) {
-             dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          if (ctx) {
+            const ratio = Math.max(SIZE / img.width, SIZE / img.height);
+            const x = (SIZE - img.width * ratio) / 2;
+            const y = (SIZE - img.height * ratio) / 2;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, SIZE, SIZE);
+            ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
           }
-
-          resolve(dataUrl);
+          // Haute qualité (0.9) - Impossible pour Firebase, parfait pour LocalStorage/IndexedDB
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
       };
-      reader.onerror = (error) => reject(error);
     });
   };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && user && user.uid !== 'local-user') {
+    if (file && user) {
       setIsUploading(true);
       try {
-        const compressed = await compressImage(file);
+        const highQualityUrl = await compressHighQuality(file);
         
-        if (compressed.length > 2048) {
-            throw new Error("L'image est encore trop grande pour le mode gratuit.");
-        }
+        // On met à jour l'UI locale immédiatement (App.tsx gérera la persistance dans localStorage)
+        onUpdateUser({ photoURL: highQualityUrl });
 
-        await updateProfile(user, { photoURL: compressed });
-        onUpdateUser({ photoURL: compressed });
-      } catch (err: any) {
-        console.error("Erreur mise à jour photo:", err);
-        alert(err.message || "Erreur lors du traitement de l'image.");
+        // On essaie quand même de mettre à jour Firebase avec une version ultra-light 
+        // pour que l'avatar existe sur d'autres appareils, même flou.
+        const canvas = document.createElement('canvas');
+        canvas.width = 32; canvas.height = 32;
+        const img = new Image();
+        img.src = highQualityUrl;
+        img.onload = async () => {
+           canvas.getContext('2d')?.drawImage(img, 0, 0, 32, 32);
+           const tiny = canvas.toDataURL('image/jpeg', 0.1);
+           try {
+             await updateProfile(user, { photoURL: tiny });
+           } catch (e) { /* On ignore si Firebase refuse le tiny */ }
+        };
+
+      } catch (err) {
+        console.error("Erreur photo:", err);
       } finally {
         setIsUploading(false);
-        if (photoInputRef.current) photoInputRef.current.value = ""; 
+        if (photoInputRef.current) photoInputRef.current.value = "";
       }
     }
   };
@@ -215,18 +213,16 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               )}
             </div>
             
-            {isRealUser && (
-              <button 
-                onClick={() => photoInputRef.current?.click()}
-                disabled={isUploading}
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-white border border-slate-100 rounded-full shadow-lg flex items-center justify-center text-indigo-600 active:scale-90 transition-transform disabled:opacity-50"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            )}
+            <button 
+              onClick={() => photoInputRef.current?.click()}
+              disabled={isUploading}
+              className="absolute -bottom-1 -right-1 w-8 h-8 bg-white border border-slate-100 rounded-full shadow-lg flex items-center justify-center text-indigo-600 active:scale-90 transition-transform disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
             <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
 
@@ -251,6 +247,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
+      {/* Reste du code identique (Mes Comptes, Cycle, Sauvegarde, etc.) */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
