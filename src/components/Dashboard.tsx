@@ -43,24 +43,19 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 const fetchAiAdvice = async () => {
     const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
-    
     if (!API_KEY || loadingAdvice) return;
     setLoadingAdvice(true);
-    
     try {
-      // Changement du modèle vers gemini-1.5-flash-8b pour plus de compatibilité
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-8b:generateContent?key=${API_KEY}`, {
+      // Utilisation du modèle gemini-pro (le plus compatible avec l'API v1)
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: "Donne un conseil financier zen très court (max 60 caractères) en français, sans guillemets." }] }]
         })
       });
-      
       const data = await response.json();
-
       if (data.error) {
-        // Si ça échoue encore, on affiche l'erreur pour comprendre
         setAiAdvice("Erreur API: " + data.error.message);
       } else {
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
