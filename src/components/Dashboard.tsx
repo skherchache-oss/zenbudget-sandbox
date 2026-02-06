@@ -152,7 +152,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      <div className="pt-6 flex justify-between items-end">
+      {/* HEADER REORGANISE */}
+      <div className="pt-4 flex justify-between items-start">
         <div className="flex flex-col" ref={menuRef}>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 mb-1">{getGreeting()}</p>
           <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">Ma Situation</h2>
@@ -190,8 +191,17 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <button onClick={handleExportCSV} className="w-12 h-12 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-all active:scale-90 group">
-          <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+        {/* BOUTON EXPORT CSV EN HAUT A DROITE */}
+        <button 
+          onClick={handleExportCSV} 
+          className="flex flex-col items-center gap-1 group transition-all"
+        >
+          <div className="w-11 h-11 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-100 flex items-center justify-center transition-all active:scale-90">
+            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-indigo-600 transition-colors">Export CSV</span>
         </button>
       </div>
 
