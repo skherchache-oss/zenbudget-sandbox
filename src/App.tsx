@@ -244,6 +244,9 @@ const App: React.FC = () => {
     }
   };
 
+  // --- RÉCUPÉRATION PHOTO HD POUR LE HEADER ---
+  const headerPhoto = (fbUser && localStorage.getItem(`user_photo_hd_${fbUser.uid}`)) || state.user.photoURL;
+
   if (authLoading) return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
   if (!fbUser) return <AuthScreen onLocalMode={() => { setFbUser({ uid: 'local-user', displayName: 'Invité' } as any); setShowWelcome(true); }} />;
 
@@ -257,11 +260,22 @@ const App: React.FC = () => {
                <IconLogo className="w-8 h-8" />
               <h1 className="text-xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
             </div>
-            {/* L'image de profil en haut s'appuie sur state.user.photoURL */}
+            
             <div className="flex items-center gap-4">
-              {state.user.photoURL && (
-                <img src={state.user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
-              )}
+              {/* L'image de profil utilise désormais headerPhoto (HD si disponible) */}
+              <div 
+                onClick={() => setActiveView('SETTINGS')} 
+                className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden cursor-pointer active:scale-90 transition-transform bg-slate-50 flex items-center justify-center"
+              >
+                {headerPhoto ? (
+                  <img src={headerPhoto} alt="User" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-black text-indigo-600">
+                    {fbUser?.displayName?.charAt(0) || 'Z'}
+                  </span>
+                )}
+              </div>
+              
               <button onClick={() => setShowWelcome(true)} className="text-slate-300 hover:text-indigo-500 transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </button>
@@ -315,7 +329,7 @@ const App: React.FC = () => {
                   state={state} user={fbUser}
                   onUpdateAccounts={(accs) => setState(prev => ({ ...prev, accounts: accs }))}
                   onSetActiveAccount={(id) => setState(prev => ({ ...prev, activeAccountId: id }))}
-                  onUpdateUser={handleUpdateUser} /* ON PASSE LA FONCTION ICI */
+                  onUpdateUser={handleUpdateUser} 
                   onDeleteAccount={(id) => {
                     setState(prev => {
                       const nextAccounts = prev.accounts.filter(a => a.id !== id);
@@ -328,7 +342,10 @@ const App: React.FC = () => {
                       setIsInitializing(true);
                       const freshState = getInitialState();
                       localStorage.removeItem('zenbudget_state_v3');
-                      if (fbUser) await saveUserData(fbUser.uid, sanitizeForFirebase(freshState));
+                      if (fbUser) {
+                        localStorage.removeItem(`user_photo_hd_${fbUser.uid}`);
+                        await saveUserData(fbUser.uid, sanitizeForFirebase(freshState));
+                      }
                       setState(freshState);
                       setTimeout(() => window.location.reload(), 200);
                     } 
