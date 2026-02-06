@@ -80,6 +80,9 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isEditingUserName, setIsEditingUserName] = useState(false);
+  const [tempUserName, setTempUserName] = useState(user?.displayName || '');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,6 +114,21 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     onUpdateAccounts(nextAccounts); 
     setEditingAccountId(null); 
   }; 
+
+  const handleSaveUserName = async () => {
+    if (!user || !tempUserName.trim()) {
+      setIsEditingUserName(false);
+      return;
+    }
+    try {
+      await updateProfile(user, { displayName: tempUserName.trim() });
+      onUpdateUser({ name: tempUserName.trim() });
+      setIsEditingUserName(false);
+    } catch (err) {
+      console.error("Erreur mise à jour nom:", err);
+      setIsEditingUserName(false);
+    }
+  };
 
   const updateCycleDay = (day: number) => { 
     if (!activeAccount) return; 
@@ -160,13 +178,11 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       setIsUploading(true);
       try {
         const highQualityUrl = await compressHighQuality(file);
-        
-        // SAUVEGARDE LOCALE FORCÉE
         localStorage.setItem(`user_photo_hd_${user.uid}`, highQualityUrl);
         onUpdateUser({ photoURL: highQualityUrl });
 
         const canvas = document.createElement('canvas');
-        canvas.width = 40; canvas.height = 40; // Légèrement plus grand pour mobile
+        canvas.width = 40; canvas.height = 40;
         const img = new Image();
         img.src = highQualityUrl;
         img.onload = async () => {
@@ -204,8 +220,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   };
 
   const isRealUser = user && user.uid !== 'local-user';
-  
-  // PRIORITÉ À L'IMAGE LOCALE HD
   const currentPhoto = (user && localStorage.getItem(`user_photo_hd_${user.uid}`)) || state.user.photoURL;
 
   return ( 
@@ -256,12 +270,33 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           </div>
 
           <div className="flex flex-col items-center w-full min-w-0">
-            <div className="flex items-center gap-2 mb-1 max-w-full">
-              <h3 className="font-black text-slate-800 text-lg leading-tight truncate">
-                {user?.displayName || 'Utilisateur Invité'}
-              </h3>
-              <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-            </div>
+            {isEditingUserName ? (
+              <div className="flex items-center gap-2 w-full max-w-[200px]">
+                <input 
+                  autoFocus 
+                  value={tempUserName}
+                  onChange={e => setTempUserName(e.target.value)}
+                  onBlur={handleSaveUserName}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveUserName()}
+                  className="w-full bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none"
+                />
+              </div>
+            ) : (
+              <div 
+                className="flex items-center gap-2 mb-1 max-w-full cursor-pointer group"
+                onClick={() => isRealUser && setIsEditingUserName(true)}
+              >
+                <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">
+                  {user?.displayName || 'Utilisateur Invité'}
+                </h3>
+                {isRealUser && (
+                  <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                )}
+                <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+              </div>
+            )}
             <p className="text-[11px] font-bold text-slate-400 truncate w-full px-4">
               {user?.email || 'Mode Hors-ligne'}
             </p>
@@ -276,7 +311,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* Reste des sections (Aide, Mes Comptes, etc.) */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
@@ -392,7 +426,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
             Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
           </p> 
-          <button    
+          <button     
             onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}   
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
@@ -400,8 +434,8 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           </button> 
         </div> 
 
-        <button    
-          onClick={onReset}    
+        <button     
+          onClick={onReset}     
           className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
         > 
           Réinitialiser les données 
