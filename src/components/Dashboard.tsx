@@ -43,8 +43,13 @@ const Dashboard: React.FC<DashboardProps> = ({
 
  const fetchAiAdvice = async () => {
     const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
+    
+    // Log pour vérifier la clé dans F12 (on l'enlèvera après)
+    console.log("Clé trouvée ?", API_KEY ? "OUI (commence par " + API_KEY.substring(0, 3) + ")" : "NON");
+
     if (!API_KEY || loadingAdvice) return;
     setLoadingAdvice(true);
+    
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
@@ -53,11 +58,18 @@ const Dashboard: React.FC<DashboardProps> = ({
           contents: [{ parts: [{ text: "Donne un conseil financier zen très court (max 60 caractères) en français, sans guillemets." }] }]
         })
       });
+      
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      setAiAdvice(text?.trim() || "ZenTip : Respirez, votre budget est sous contrôle. ✨");
+      console.log("Réponse brute Google:", data); // Pour voir l'erreur réelle si elle existe
+
+      if (data.error) {
+        setAiAdvice("Erreur API: " + data.error.message);
+      } else {
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        setAiAdvice(text?.trim() || "ZenTip : Respirez, votre budget est sous contrôle. ✨");
+      }
     } catch (err) {
-      console.error("Erreur IA:", err);
+      console.error("Erreur Fetch:", err);
       setAiAdvice("ZenTip : Respirez, votre budget est sous contrôle. ✨");
     } finally {
       setLoadingAdvice(false);
