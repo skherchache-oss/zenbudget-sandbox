@@ -60,7 +60,7 @@ const App: React.FC = () => {
               id: firebaseUser.uid,
               name: firebaseUser.displayName || 'Utilisateur',
               email: firebaseUser.email || '',
-              photoURL: firebaseUser.photoURL || null // Utiliser null pour Firebase
+              photoURL: firebaseUser.photoURL || null 
             }
           });
         }
@@ -71,7 +71,6 @@ const App: React.FC = () => {
       }
       
       setAuthLoading(false);
-      // On libère le verrou de sauvegarde après un court délai pour laisser le state se stabiliser
       setTimeout(() => {
         setIsInitializing(false);
         console.log("🔓 Verrou de sauvegarde levé");
@@ -80,14 +79,10 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Sauvegarde automatique (Surveillée par le verrou)
+  // 2. Sauvegarde automatique
   useEffect(() => {
     if (isInitializing || authLoading || isImporting.current) return;
-
-    // Sauvegarde locale
     saveState(state);
-    
-    // Sauvegarde Cloud
     if (fbUser && fbUser.uid && fbUser.uid !== 'local-user') {
       saveUserData(fbUser.uid, sanitizeForFirebase(state));
     }
@@ -172,7 +167,6 @@ const App: React.FC = () => {
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeAccount, currentMonth, currentYear, paidMarkers]);
 
-  // AJOUT TRANSACTION : Forçage Cloud pur avec nettoyage
   const handleUpsertTransaction = async (t: Omit<Transaction, 'id'> & { id?: string }) => {
     const accIndex = state.accounts.findIndex(a => a.id === state.activeAccountId);
     if (accIndex === -1) return;
@@ -193,24 +187,19 @@ const App: React.FC = () => {
     
     const nextAccounts = [...state.accounts];
     nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
-    
     const newState = { ...state, accounts: nextAccounts };
     
-    // 1. Mise à jour locale (visuelle)
     setState(newState);
     setShowAddModal(false); 
     setEditingTransaction(null);
 
-    // 2. Sauvegarde immédiate forçée avec Sanitize
     saveState(newState);
     if (fbUser && fbUser.uid && fbUser.uid !== 'local-user') {
       try {
-        console.log("☁️ Envoi vers Firebase...");
         const cleanData = sanitizeForFirebase(newState);
         await saveUserData(fbUser.uid, cleanData);
-        console.log("✅ Sauvegarde terminée et confirmée par Firebase.");
       } catch (err) {
-        console.error("❌ Erreur lors de la sauvegarde forcée:", err);
+        console.error("❌ Erreur sauvegarde:", err);
       }
     }
   };
@@ -228,11 +217,11 @@ const App: React.FC = () => {
   if (!fbUser) return <AuthScreen onLocalMode={() => setFbUser({ uid: 'local-user', displayName: 'Invité' } as any)} />;
 
   return (
-    /* CONTENEUR GLOBAL : Fond gris bleu sur desktop pour faire ressortir l'appli */
-    <div className="min-h-screen bg-slate-200 flex justify-center overflow-hidden font-sans">
+    /* FOND GLOBAL : Noir Profond / Slate avec un dégradé radial élégant */
+    <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
       
-      {/* CONTENEUR APPLICATIF : Largeur limitée sur desktop, pleine largeur sur mobile */}
-      <div className="w-full max-w-[480px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_50px_-12px_rgba(0,0,0,0.15)] border-x border-slate-100/50">
+      {/* CADRE DE L'APPLICATION : Légèrement plus large (540px) */}
+      <div className="w-full max-w-[540px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_100px_-20px_rgba(0,0,0,0.8)] border-x border-white/5">
         
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-3 shrink-0 z-50">
           <div className="flex items-center justify-between">
@@ -255,7 +244,7 @@ const App: React.FC = () => {
               variants={{ enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (dir: number) => ({ x: dir < 0 ? '100%' : '-100%', opacity: 0 }) }}
               initial="enter" animate="center" exit="exit"
               transition={{ type: "spring", stiffness: 350, damping: 35 }}
-              className="absolute inset-0 px-4 pt-4 pb-24 overflow-y-auto no-scrollbar"
+              className="absolute inset-0 px-6 pt-4 pb-24 overflow-y-auto no-scrollbar"
             >
               {activeView === 'DASHBOARD' && (
                 <Dashboard 
@@ -329,11 +318,9 @@ const App: React.FC = () => {
           </AnimatePresence>
         </main>
 
-        {/* Bouton Plus repositionné de manière relative au conteneur */}
-        <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="absolute bottom-24 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
+        <button onClick={() => { setEditingTransaction(null); setShowAddModal(true); }} className="absolute bottom-24 right-8 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 z-40 border-4 border-white"><IconPlus className="w-6 h-6" /></button>
 
-        {/* Navigation fixée au bas du conteneur central */}
-        <nav className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 flex justify-around items-center pt-2 pb-8 px-6 z-40">
+        <nav className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 flex justify-around items-center pt-2 pb-8 px-8 z-40">
           <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Stats" />
           <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" />
           <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" />
@@ -349,16 +336,11 @@ const App: React.FC = () => {
                 <div className="flex justify-center text-4xl">🌿</div>
                 <h2 className="text-2xl font-black text-center italic text-slate-800 tracking-tight">Guide Zen</h2>
                 <div className="space-y-4 text-slate-600">
-                  <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 flex gap-3">
-                    <span className="font-black text-indigo-600">0.</span>
-                    <p className="text-xs font-bold text-indigo-900 leading-relaxed">À la 1ère utilisation : ajoutez votre <b className="text-indigo-600">solde bancaire actuel</b> comme un <b>Revenu</b> ponctuel aujourd'hui dans le <b>Journal</b>.</p>
-                  </div>
-                  <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Configurez vos <b>flux fixes</b> (loyer, abonnements...) dans l'onglet <b>"Fixes"</b>. Ils seront automatiquement intégrés les mois suivants.</p></div>
-                  <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Vérifiez votre <b>"Disponible Réel"</b> : c'est l'argent que vous pouvez dépenser sereinement.</p></div>
-                  <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">3.</span><p className="text-sm font-medium leading-relaxed"><b>Sauvegardes</b> : Utilisez l'<b>Export Backup</b> (Réglages) pour restaurer votre budget en cas de réinitialisation. L'<b>Export CSV</b> sert à la lecture sur Excel.</p></div>
-                  <div className="flex gap-3 px-1"><span className="font-black text-emerald-500">4.</span><p className="text-sm font-medium leading-relaxed"><b>Synchronisation :</b> Vos données sont liées à <b>{fbUser?.email || 'votre compte'}</b>.</p></div>
+                   <div className="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 flex gap-3"><span className="font-black text-indigo-600">0.</span><p className="text-xs font-bold text-indigo-900">Solde initial à ajouter dans le Journal.</p></div>
+                   <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">1.</span><p className="text-sm font-medium">Flux fixes dans l'onglet "Fixes".</p></div>
+                   <div className="flex gap-3 px-1"><span className="font-black text-indigo-600">2.</span><p className="text-sm font-medium">Surveillez votre "Disponible Réel".</p></div>
+                   <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest mt-4">C'est parti !</button>
                 </div>
-                <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all mt-4">C'est parti !</button>
               </motion.div>
             </motion.div>
           )}
