@@ -57,20 +57,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
       {/* Conteneur principal de la carte */}
       <div className="w-full max-w-[420px] flex flex-col items-center">
         
-        {/* La carte blanche avec marges internes augmentées (p-10 à p-12) */}
+        {/* La carte blanche */}
         <div className="w-full bg-white/95 backdrop-blur-2xl p-10 sm:p-12 rounded-[50px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/20 flex flex-col justify-center transform transition-all">
           
-          {/* Logo réduit (w-14) pour créer plus de vide blanc au-dessus */}
-          <div className="w-14 h-14 bg-slate-900 rounded-[22px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0 mt-2">
-            <IconLogo className="w-8 h-8 text-white" />
+          {/* LOGO AGRANDI : w-20 au lieu de w-14 */}
+          <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0 mt-2">
+            <IconLogo className="w-12 h-12 text-white" />
           </div>
           
           <div className="text-center space-y-1 mb-8">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">
                {isLogin ? getGreeting() : "Bienvenue"}
             </p>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter italic text-slate-900 leading-none">
-              {isLogin ? 'Ma Situation' : 'Créer un espace'}
+            {/* TITRE MODIFIÉ : ZenBudget */}
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic text-slate-900 leading-none">
+              {isLogin ? 'ZenBudget' : 'Créer un espace'}
             </h1>
             <p className="text-slate-400 text-[11px] font-medium leading-relaxed px-4">
               {isLogin ? 'Retrouvez votre sérénité.' : 'Rejoignez ZenBudget.'}
@@ -152,7 +153,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             </button>
           </div>
 
-          {/* Bouton invité compacté avec une marge basse interne (mb-2) pour laisser du blanc */}
           <button 
             type="button"
             onClick={onLocalMode} 
@@ -162,7 +162,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
           </button>
         </div>
 
-        {/* Espace noir sous la carte pour le copyright */}
         <p className="mt-6 text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] opacity-40">
           ZenBudget — Est. 2026
         </p>
