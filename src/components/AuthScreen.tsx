@@ -52,9 +52,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-slate-950 px-6 text-center overflow-y-auto font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 px-6 text-center overflow-y-auto font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black py-10">
       
-      <div className="w-full max-w-[440px] bg-white/95 backdrop-blur-2xl p-10 rounded-[45px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20">
+      <div className="w-full max-w-[440px] bg-white/95 backdrop-blur-2xl p-8 sm:p-10 rounded-[45px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 my-auto">
         
         <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-2xl flex items-center justify-center mb-8 mx-auto transform -rotate-6">
           <IconLogo className="w-12 h-12 text-white" />
@@ -117,6 +117,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
 
         <div className="space-y-6">
           <button 
+            type="button"
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
             className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
           >
@@ -129,7 +130,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             <div className="h-[1px] bg-slate-100 flex-1"></div>
           </div>
 
-          {/* BOUTON GOOGLE CORRIGÉ ET STYLISÉ */}
           <button 
             type="button"
             onClick={loginWithGoogle} 
@@ -147,8 +147,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
           </button>
         </div>
 
-        {/* MODE INVITÉ PLUS LISIBLE */}
         <button 
+          type="button"
           onClick={onLocalMode} 
           className="mt-10 w-full py-4 bg-slate-900 text-white rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 active:scale-95 transition-all"
         >
@@ -156,7 +156,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
         </button>
       </div>
       
-      <p className="absolute bottom-8 text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] opacity-40">
+      <p className="mt-8 text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] opacity-40">
         ZenBudget — Est. 2026
       </p>
     </div>
