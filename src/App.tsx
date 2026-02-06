@@ -39,6 +39,11 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
 
+  // Fonction utilitaire pour supprimer les "undefined" qui font planter Firebase
+  const sanitizeForFirebase = (obj: any): any => {
+    return JSON.parse(JSON.stringify(obj));
+  };
+
   // 1. Chargement initial et Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -55,7 +60,7 @@ const App: React.FC = () => {
               id: firebaseUser.uid,
               name: firebaseUser.displayName || 'Utilisateur',
               email: firebaseUser.email || '',
-              photoURL: firebaseUser.photoURL || undefined
+              photoURL: firebaseUser.photoURL || null // Utiliser null pour Firebase
             }
           });
         }
@@ -83,8 +88,8 @@ const App: React.FC = () => {
     saveState(state);
     
     // Sauvegarde Cloud
-    if (fbUser && fbUser.uid !== 'local-user') {
-      saveUserData(fbUser.uid, state);
+    if (fbUser && fbUser.uid && fbUser.uid !== 'local-user') {
+      saveUserData(fbUser.uid, sanitizeForFirebase(state));
     }
   }, [state, fbUser, authLoading, isInitializing]);
 
@@ -167,7 +172,7 @@ const App: React.FC = () => {
     return [...realOnes, ...virtuals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeAccount, currentMonth, currentYear, paidMarkers]);
 
-  // AJOUT TRANSACTION : Forçage Cloud pur
+  // AJOUT TRANSACTION : Forçage Cloud pur avec nettoyage
   const handleUpsertTransaction = async (t: Omit<Transaction, 'id'> & { id?: string }) => {
     const accIndex = state.accounts.findIndex(a => a.id === state.activeAccountId);
     if (accIndex === -1) return;
@@ -196,12 +201,17 @@ const App: React.FC = () => {
     setShowAddModal(false); 
     setEditingTransaction(null);
 
-    // 2. Sauvegarde immédiate forçée
+    // 2. Sauvegarde immédiate forçée avec Sanitize
     saveState(newState);
-    if (fbUser && fbUser.uid !== 'local-user') {
-      console.log("☁️ Envoi forcé vers Firebase...");
-      await saveUserData(fbUser.uid, newState);
-      console.log("✅ Confirmé par Firebase.");
+    if (fbUser && fbUser.uid && fbUser.uid !== 'local-user') {
+      try {
+        console.log("☁️ Envoi vers Firebase...");
+        const cleanData = sanitizeForFirebase(newState);
+        await saveUserData(fbUser.uid, cleanData);
+        console.log("✅ Sauvegarde terminée et confirmée par Firebase.");
+      } catch (err) {
+        console.error("❌ Erreur lors de la sauvegarde forcée:", err);
+      }
     }
   };
 
@@ -284,7 +294,7 @@ const App: React.FC = () => {
                     setIsInitializing(true);
                     const freshState = getInitialState();
                     localStorage.removeItem('zenbudget_state_v3');
-                    if (fbUser) await saveUserData(fbUser.uid, freshState);
+                    if (fbUser) await saveUserData(fbUser.uid, sanitizeForFirebase(freshState));
                     setState(freshState);
                     setTimeout(() => window.location.reload(), 200);
                   } 
@@ -301,7 +311,7 @@ const App: React.FC = () => {
                       setIsInitializing(true);
                       const finalState = { ...imported, user: state.user };
                       setState(finalState);
-                      if (fbUser) await saveUserData(fbUser.uid, finalState);
+                      if (fbUser) await saveUserData(fbUser.uid, sanitizeForFirebase(finalState));
                       alert("Import réussi !");
                       window.location.reload();
                     } catch (err) { alert("Fichier invalide"); } 
