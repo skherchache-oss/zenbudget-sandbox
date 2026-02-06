@@ -182,22 +182,15 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
-  // NOUVELLE FONCTION : Supprimer la photo
   const handleRemovePhoto = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Évite de déclencher le clic sur l'input file
+    e.stopPropagation();
     if (!user || isUploading) return;
     
-    if (confirm("Supprimer votre photo de profil ?")) {
+    if (confirm("Supprimer la photo de profil ?")) {
       setIsUploading(true);
       try {
-        // 1. On nettoie Firebase (remet à null)
         await updateProfile(user, { photoURL: null });
-        
-        // 2. On nettoie l'état local
-        // Si l'utilisateur est connecté avec Google, user.photoURL reviendra 
-        // souvent à l'image par défaut de Google après un rafraîchissement.
         onUpdateUser({ photoURL: null });
-        
       } catch (err) {
         console.error("Erreur suppression photo:", err);
       } finally {
@@ -213,8 +206,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
-          <div className="relative group">
-            <div className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl ${isUploading ? 'opacity-50' : ''}`}>
+          
+          {/* AVATAR CONTAINER */}
+          <div className="relative group cursor-pointer">
+            <div 
+              onClick={() => photoInputRef.current?.click()}
+              className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl transition-all group-hover:ring-4 group-hover:ring-indigo-50 ${isUploading ? 'opacity-50' : ''}`}
+            >
               {state.user.photoURL ? (
                 <img src={state.user.photoURL} alt="Profil" className="w-full h-full object-cover" />
               ) : (
@@ -222,6 +220,14 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
                   {user?.displayName?.charAt(0) || 'Z'}
                 </span>
               )}
+              
+              {/* Overlay au survol */}
+              <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                 </svg>
+              </div>
+
               {isUploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -229,33 +235,18 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               )}
             </div>
             
-            <div className="absolute -bottom-1 -right-1 flex flex-col gap-1">
-              {/* Bouton Changer (Appareil photo) */}
+            {/* BOUTON SUPPRIMER DISCRET (Petit badge en haut à droite) */}
+            {state.user.photoURL && !isUploading && (
               <button 
-                onClick={() => photoInputRef.current?.click()}
-                disabled={isUploading}
-                className="w-8 h-8 bg-white border border-slate-100 rounded-full shadow-lg flex items-center justify-center text-indigo-600 active:scale-90 transition-transform disabled:opacity-50"
+                onClick={handleRemovePhoto}
+                className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all"
+                title="Supprimer la photo"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-
-              {/* Bouton Supprimer (Poubelle) - Apparaît seulement s'il y a une photo */}
-              {state.user.photoURL && (
-                <button 
-                  onClick={handleRemovePhoto}
-                  disabled={isUploading}
-                  className="w-8 h-8 bg-red-50 border border-red-100 rounded-full shadow-lg flex items-center justify-center text-red-500 active:scale-90 transition-transform disabled:opacity-50"
-                  title="Supprimer la photo"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
-            </div>
+            )}
             
             <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
@@ -281,7 +272,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* Le reste des sections (Aide, Mes Comptes, Cycle, etc.) reste identique */}
+      {/* Reste du fichier inchangé... */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
