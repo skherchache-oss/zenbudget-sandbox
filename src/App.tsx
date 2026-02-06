@@ -296,7 +296,7 @@ const App: React.FC = () => {
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => setShowAddModal(false)} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
         
-        {/* LE GUIDE ZEN COMPLET */}
+        {/* LE GUIDE ZEN NETTOYÉ */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowWelcome(false)}>
@@ -308,35 +308,35 @@ const App: React.FC = () => {
                    <div className="bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-5 flex gap-4">
                      <span className="font-black text-xl text-indigo-600">0.</span>
                      <p className="text-[13px] font-bold text-indigo-900 leading-relaxed">
-                        Ajoutez votre solde bancaire actuel comme un **Revenu ponctuel aujourd'hui** dans le **Journal**.
+                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel aujourd'hui</span> dans le <span className="font-black">Journal</span>.
                      </p>
                    </div>
 
                    <div className="flex gap-4 px-2 items-start">
                       <span className="font-black text-indigo-600 text-lg">1.</span>
                       <p className="text-[13px] font-medium text-slate-600 leading-snug">
-                        Configurez vos flux fixes (loyer, abonnements...) dans l'onglet **"Fixes"** ou **"Journal"**.
+                        Configurez vos flux fixes (loyer, abonnements...) dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span> ou <span className="font-bold text-slate-800">"Journal"</span>.
                       </p>
                    </div>
 
                    <div className="flex gap-4 px-2 items-start">
                       <span className="font-black text-indigo-600 text-lg">2.</span>
                       <p className="text-[13px] font-medium text-slate-600 leading-snug">
-                        Entrez vos variables depuis le calendrier dans votre **Journal**.
+                        Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
                       </p>
                    </div>
 
                    <div className="flex gap-4 px-2 items-start">
                       <span className="font-black text-indigo-600 text-lg">3.</span>
                       <p className="text-[13px] font-medium text-slate-600 leading-snug">
-                        Vérifiez votre **"Disponible Réel"** depuis le Board : c'est l'argent que vous pouvez dépenser sereinement pour éviter le découvert.
+                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le Board : c'est l'argent que vous pouvez dépenser sereinement pour éviter le découvert.
                       </p>
                    </div>
 
                    <div className="flex gap-4 px-2 items-start border-t border-slate-100 pt-4 mt-2">
                       <span className="font-black text-indigo-600 text-lg">4.</span>
                       <p className="text-[13px] font-medium text-slate-500 italic leading-snug">
-                        **Sauvegarde vs CSV** : utilisez l'Export Backup (Paramètres) pour restaurer votre budget. L'Export CSV (Board) est une lecture pour Excel.
+                        <span className="font-bold">Sauvegarde vs CSV</span> : utilisez l'Export Backup (Paramètres) pour restaurer votre budget. L'Export CSV (Board) est une lecture pour Excel.
                       </p>
                    </div>
                 </div>
