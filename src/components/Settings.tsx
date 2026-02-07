@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
-import { User as FirebaseUser, updateProfile } from 'firebase/auth';
+import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
 
 interface SettingsProps { 
   state: AppState; 
@@ -127,6 +127,25 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     } catch (err) {
       console.error("Erreur mise à jour nom:", err);
       setIsEditingUserName(false);
+    }
+  };
+
+  const handleDeleteUserAccount = async () => {
+    if (!user) return;
+    const confirmDelete = prompt("Pour supprimer définitivement votre compte ZenBudget et TOUTES vos données Cloud, tapez 'SUPPRIMER'");
+    if (confirmDelete === 'SUPPRIMER') {
+      try {
+        await deleteUser(user);
+        alert("Votre compte a été supprimé. Au revoir ! ✨");
+        onLogout();
+      } catch (err: any) {
+        if (err.code === 'auth/requires-recent-login') {
+          alert("Action sensible : Veuillez vous reconnecter, puis réessayer immédiatement la suppression.");
+          onLogout();
+        } else {
+          alert("Une erreur est survenue lors de la suppression.");
+        }
+      }
     }
   };
 
@@ -426,7 +445,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
             Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
           </p> 
-          <button     
+          <button      
             onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}   
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
@@ -434,12 +453,23 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           </button> 
         </div> 
 
-        <button     
-          onClick={onReset}     
-          className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
-        > 
-          Réinitialiser les données 
-        </button> 
+        <div className="flex flex-col gap-2">
+          <button      
+            onClick={onReset}      
+            className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl" 
+          > 
+            Réinitialiser les données locales
+          </button> 
+
+          {isRealUser && (
+            <button      
+              onClick={handleDeleteUserAccount}      
+              className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
+            > 
+              Supprimer mon compte & données cloud
+            </button> 
+          )}
+        </div>
       </section> 
 
       <div className="text-center pb-10"> 

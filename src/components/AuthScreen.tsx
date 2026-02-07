@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  updateProfile 
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, loginWithGoogle } from '../firebase';
 import { IconLogo } from './Icons';
@@ -17,6 +18,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const getGreeting = () => {
@@ -29,6 +31,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
@@ -51,28 +54,42 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Entrez votre email ci-dessus d\'abord.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setSuccess('Email de récupération envoyé !');
+    } catch (err: any) {
+      setError('Erreur lors de l\'envoi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-slate-950 font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden px-6">
       
-      {/* Conteneur principal de la carte */}
       <div className="w-full max-w-[420px] flex flex-col items-center">
         
-        {/* La carte blanche */}
         <div className="w-full bg-white/95 backdrop-blur-2xl p-10 sm:p-12 rounded-[50px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/20 flex flex-col justify-center transform transition-all">
           
-          {/* Logo agrandi */}
           <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0 mt-2">
             <IconLogo className="w-12 h-12 text-white" />
           </div>
           
           <div className="text-center space-y-1 mb-8">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">
-               {isLogin ? getGreeting() : "Bienvenue"}
+                {isLogin ? getGreeting() : "Bienvenue"}
             </p>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic text-slate-900 leading-none">
               {isLogin ? 'ZenBudget' : 'Créer un espace'}
             </h1>
-            {/* Texte mis à jour : Retrouvez votre sérénité financière */}
             <p className="text-slate-400 text-[11px] font-medium leading-relaxed px-4">
               {isLogin ? 'Retrouvez votre sérénité financière.' : 'Rejoignez ZenBudget.'}
             </p>
@@ -103,7 +120,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
-              required
+              required={isLogin}
             />
 
             {error && (
@@ -112,19 +129,37 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-indigo-600 text-white rounded-[18px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[10px] uppercase tracking-[0.2em] disabled:opacity-50"
-            >
-              {loading ? 'Connexion...' : isLogin ? 'Se connecter' : 'Créer mon compte'}
-            </button>
+            {success && (
+              <div className="bg-emerald-50 text-emerald-500 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 text-center">
+                {success}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-indigo-600 text-white rounded-[18px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[10px] uppercase tracking-[0.2em] disabled:opacity-50"
+              >
+                {loading ? 'Connexion...' : isLogin ? 'Se connecter' : 'Créer mon compte'}
+              </button>
+
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="w-full text-[8px] font-black uppercase tracking-widest text-slate-300 hover:text-indigo-400 transition-colors py-1"
+                >
+                  Mot de passe oublié ?
+                </button>
+              )}
+            </div>
           </form>
 
           <div className="space-y-4 flex flex-col mb-6">
             <button 
               type="button"
-              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
               className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors mx-auto"
             >
               {isLogin ? "Créer un compte" : "Se connecter"}
