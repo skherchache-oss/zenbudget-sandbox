@@ -45,7 +45,7 @@ const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: 
         <circle cx="0" cy="0" r="0.78" fill="white" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Total Charges</span>
+        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter italic">Total Charges</span>
         <span className="text-xl font-black text-slate-900 leading-none">
           -{Math.round(total).toLocaleString('fr-FR')}€
         </span>
@@ -118,13 +118,10 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   const [comment, setComment] = useState('');
   const [day, setDay] = useState('1');
 
-  // --- CALCULS SÉPARÉS DÉPENSES VS REVENUS ---
   const { expenseChartData, totalExpenses, totalIncomes } = useMemo(() => {
     const activeTemplates = recurringTemplates.filter(t => t.isActive);
-    
     const expenses = activeTemplates.filter(t => t.type === 'EXPENSE');
     const incomes = activeTemplates.filter(t => t.type === 'INCOME');
-
     const totalE = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     const totalI = incomes.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
@@ -169,31 +166,31 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   return (
     <div className="space-y-6 pb-32 h-full overflow-y-auto no-scrollbar px-1">
       <div className="flex items-center justify-between px-1 mt-4">
-        <h2 className="text-xl font-black tracking-tighter text-slate-800 italic">Flux Fixes</h2>
+        <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
-      {/* --- SECTION ANALYSE --- */}
       <div className="bg-white rounded-[40px] p-6 shadow-sm border border-slate-100 mb-2">
-        {/* Résumé des revenus (distinction claire) */}
-        <div className="flex justify-between items-center px-4 py-3 bg-emerald-50 rounded-2xl mb-6">
+        {/* Résumé des revenus - Icône changée pour éviter la confusion avec un bouton */}
+        <div className="flex justify-between items-center px-5 py-4 bg-emerald-50/60 rounded-[24px] mb-6 border border-emerald-100/50">
           <div className="flex flex-col">
-            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Revenus Fixes</span>
+            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-[0.1em]">Revenus récurrents</span>
             <span className="text-lg font-black text-emerald-700">+{totalIncomes.toLocaleString('fr-FR')}€</span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4" /></svg>
+          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-emerald-500 shadow-sm">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
           </div>
         </div>
 
-        {/* Graphique des Dépenses uniquement */}
         <div className="flex flex-col items-center">
           <RecurringPieChart data={expenseChartData} total={totalExpenses} />
           
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-6">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-8">
             {expenseChartData.slice(0, 4).map((cat, i) => (
-              <div key={i} className="flex items-center gap-1.5">
+              <div key={i} className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{cat.name}</span>
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">{cat.name}</span>
               </div>
             ))}
           </div>
@@ -241,7 +238,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
             </form>
           </div>
         ) : (
-          <button onClick={() => setShowAdd(true)} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 bg-white">
+          <button onClick={() => setShowAdd(true)} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 bg-white active:scale-95 transition-all">
             <IconPlus className="w-5 h-5" /> Programmer un flux fixe
           </button>
         )}
