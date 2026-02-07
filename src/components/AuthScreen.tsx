@@ -44,10 +44,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
         }
       }
     } catch (err: any) {
-      console.error(err);
       if (err.code === 'auth/user-not-found') setError('Utilisateur non trouvé.');
       else if (err.code === 'auth/wrong-password') setError('Mot de passe incorrect.');
-      else if (err.code === 'auth/email-already-in-use') setError('Cet email est déjà utilisé.');
+      else if (err.code === 'auth/email-already-in-use') setError('Email déjà utilisé.');
       else setError('Une erreur est survenue.');
     } finally {
       setLoading(false);
@@ -55,142 +54,111 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      setError('Entrez votre email ci-dessus d\'abord.');
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Format d\'email invalide.');
-      return;
-    }
+    if (!email) { setError('Entrez votre email.'); return; }
     setLoading(true);
-    setError('');
-    setSuccess('');
     try {
       await sendPasswordResetEmail(auth, email);
-      setSuccess('Si ce compte existe, un mail a été envoyé 📥');
-    } catch (err: any) {
-      setError('Erreur lors de l\'envoi.');
-    } finally {
-      setLoading(false);
-    }
+      setSuccess('Mail envoyé !');
+    } catch (err) {
+      setError('Erreur d\'envoi.');
+    } finally { setLoading(false); }
   };
 
   return (
-    // Fond noir pour les bords sur Desktop (Effet tablette au centre)
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 font-sans overflow-y-auto py-10 px-4">
+    // Fond noir sur desktop (lg), blanc sur mobile
+    <div className="h-screen w-full flex items-center justify-center bg-white lg:bg-slate-950 font-sans overflow-hidden">
       
-      {/* Conteneur Format Tablette/Mobile Large sur fond blanc */}
-      <div className="w-full max-w-[500px] bg-white rounded-[40px] shadow-[0_30px_100px_rgba(0,0,0,0.6)] flex flex-col items-center overflow-hidden">
+      {/* Container Format Tablette sur Desktop, Full sur Mobile */}
+      <div className="w-full max-w-[480px] h-full lg:h-auto lg:max-h-[95vh] bg-white lg:rounded-[50px] flex flex-col items-center justify-between p-8 sm:p-12 shadow-2xl">
         
-        <div className="w-full p-8 sm:p-12 flex flex-col justify-center transform transition-all">
-          
-          {/* Logo avec marge haute pour éviter qu'il soit rogné */}
-          <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-xl flex items-center justify-center mb-8 mx-auto transform -rotate-6 shrink-0 mt-4">
-            <IconLogo className="w-12 h-12 text-white" />
+        {/* Header / Logo */}
+        <div className="w-full flex flex-col items-center shrink-0">
+          <div className="w-16 h-16 bg-slate-900 rounded-[22px] shadow-lg flex items-center justify-center mb-4 transform -rotate-3 shrink-0">
+            <IconLogo className="w-10 h-10 text-white" />
           </div>
-          
-          <div className="text-center space-y-1 mb-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600">
+          <div className="text-center">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 leading-none mb-1">
                 {isLogin ? getGreeting() : "Bienvenue"}
             </p>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tighter italic text-slate-900 leading-none">
+            <h1 className="text-3xl font-black tracking-tighter italic text-slate-900 leading-none">
               ZenBudget
             </h1>
-            <p className="text-slate-500 text-[12px] font-medium leading-relaxed px-4 mt-2">
-              {isLogin ? 'Retrouvez votre sérénité financière.' : 'Créez votre profil en quelques secondes.'}
-            </p>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-            {!isLogin && (
-              <input
-                type="text"
-                placeholder="Nom de profil (ex: ZenMaster)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-6 py-4.5 bg-slate-50 border border-slate-100 rounded-2xl text-base font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all"
-                required
-              />
-            )}
+        {/* Formulaire - Flex-grow pour occuper l'espace central */}
+        <form onSubmit={handleSubmit} className="w-full space-y-3 my-4">
+          {!isLogin && (
             <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-6 py-4.5 bg-slate-50 border border-slate-100 rounded-2xl text-base font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+              type="text"
+              placeholder="Nom de profil"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-900 outline-none"
               required
             />
-            <input
-              type="password"
-              placeholder="Mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-6 py-4.5 bg-slate-50 border border-slate-100 rounded-2xl text-base font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all"
-              required={isLogin}
-            />
+          )}
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-900 outline-none"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-900 outline-none"
+            required={isLogin}
+          />
 
-            {error && (
-              <div className="bg-rose-50 text-rose-600 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-100 text-center">
-                {error}
-              </div>
-            )}
+          {error && <div className="text-rose-600 text-[10px] font-black uppercase text-center">{error}</div>}
+          {success && <div className="text-emerald-600 text-[10px] font-black uppercase text-center">{success}</div>}
 
-            <div className="space-y-4 pt-2">
-              {/* BOUTON SE CONNECTER AGRANDI */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-5.5 bg-indigo-600 text-white rounded-[24px] font-black shadow-xl shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[13px] uppercase tracking-[0.2em] disabled:opacity-50"
-              >
-                {loading ? 'Traitement...' : isLogin ? 'Se connecter' : 'Créer mon compte'}
-              </button>
-
-              {isLogin && (
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors py-1"
-                >
-                  Mot de passe oublié ?
-                </button>
-              )}
-            </div>
-          </form>
-
-          {/* Section Sécurité avec texte un peu plus grand */}
-          <div className="mb-10 px-5 py-5 bg-slate-50 rounded-3xl border border-slate-100">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 5.052 3.13 9.373 7.554 11.11a11.99 11.99 0 007.554-11.11c0-1.308-.21-2.565-.598-3.744A11.959 11.959 0 0112 2.714z" />
-              </svg>
-              <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">Sécurité & Confidentialité</span>
-            </div>
-            <p className="text-[10.5px] text-slate-500 font-bold leading-relaxed text-center">
-              Aucune connexion bancaire requise. Vos données sont cryptées sur Google Cloud. ZenBudget ne partage jamais vos informations.
-            </p>
-          </div>
-
-          <div className="space-y-6 flex flex-col mb-10">
-            <button 
-              type="button"
-              onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
-              className="text-[12px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors mx-auto"
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-5 bg-indigo-600 text-white rounded-[20px] font-black shadow-xl hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest disabled:opacity-50"
             >
-              {isLogin ? "Pas encore de compte ? Créer" : "Déjà un compte ? Connexion"}
+              {loading ? 'Traitement...' : isLogin ? 'Se connecter' : 'Créer mon compte'}
             </button>
+            {isLogin && (
+              <button type="button" onClick={handleForgotPassword} className="w-full text-[9px] font-black uppercase tracking-widest text-slate-400 mt-2">
+                Mot de passe oublié ?
+              </button>
+            )}
+          </div>
+        </form>
 
-            <div className="flex items-center gap-4 px-12">
-              <div className="h-[1px] bg-slate-200 flex-1"></div>
-              <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">Ou</span>
-              <div className="h-[1px] bg-slate-200 flex-1"></div>
-            </div>
+        {/* Sécurité - Un peu plus grande */}
+        <div className="w-full py-4 bg-slate-50 rounded-3xl border border-slate-100 px-4 shrink-0">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">Sécurité Cloud</span>
+          </div>
+          <p className="text-[10px] text-slate-500 font-bold leading-tight text-center">
+            Pas de connexion bancaire. Vos données sont cryptées sur Google Cloud. Confidentialité totale.
+          </p>
+        </div>
+
+        {/* Boutons Alternatifs */}
+        <div className="w-full space-y-4 shrink-0 mt-2">
+          <div className="flex flex-col gap-3">
+             <button 
+              type="button"
+              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors mx-auto"
+            >
+              {isLogin ? "Créer un compte" : "Se connecter"}
+            </button>
 
             <button 
               type="button"
               onClick={loginWithGoogle} 
-              className="w-full py-5 bg-white border-2 border-slate-100 rounded-[24px] shadow-sm flex items-center justify-center gap-3 font-black hover:bg-slate-50 active:scale-95 transition-all text-[12px] uppercase tracking-tight text-slate-700"
+              className="w-full py-5 bg-white border-2 border-slate-100 rounded-[20px] flex items-center justify-center gap-3 font-black text-xs uppercase text-slate-700 shadow-sm"
             >
               <div className="w-5 h-5 shrink-0">
                 <svg viewBox="0 0 24 24" className="w-full h-full">
@@ -202,24 +170,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               </div>
               Continuer avec Google
             </button>
-          </div>
 
-          {/* BOUTON MODE INVITÉ AGRANDI */}
-          <button 
-            type="button"
-            onClick={onLocalMode} 
-            className="w-full py-5.5 bg-slate-900 text-white rounded-[24px] text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 active:scale-95 transition-all mb-8"
-          >
-            Découvrir en mode Invité
-          </button>
+            <button 
+              type="button"
+              onClick={onLocalMode} 
+              className="w-full py-5 bg-slate-900 text-white rounded-[20px] text-xs font-black uppercase tracking-widest shadow-lg"
+            >
+              Mode Invité
+            </button>
+          </div>
         </div>
+
+        <p className="text-slate-300 text-[9px] font-bold uppercase tracking-[0.3em] py-2">
+          ZenBudget — 2026
+        </p>
       </div>
-      
-      {/* Footer extérieur discret */}
-      <p className="fixed bottom-6 text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] opacity-40">
-        ZenBudget — 2026
-      </p>
-      
     </div>
   );
 };
