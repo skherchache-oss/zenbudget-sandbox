@@ -132,11 +132,11 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
   const handleDeleteUserAccount = async () => {
     if (!user) return;
-    const confirmDelete = prompt("Pour supprimer définitivement votre compte ZenBudget et TOUTES vos données Cloud, tapez 'SUPPRIMER'");
+    const confirmDelete = prompt("Pour supprimer définitivement votre compte ZenBudget et TOUTES vos données Cloud, tapez sans espaces 'SUPPRIMER'");
     if (confirmDelete === 'SUPPRIMER') {
       try {
         await deleteUser(user);
-        alert("Votre compte a été supprimé. Au revoir ! ✨");
+        alert("Votre compte a été supprimé. A bientôt ! ✨");
         onLogout();
       } catch (err: any) {
         if (err.code === 'auth/requires-recent-login') {
