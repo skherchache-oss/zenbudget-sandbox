@@ -59,15 +59,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
       setError('Entrez votre email ci-dessus d\'abord.');
       return;
     }
+
+    // Petite vérification de format avant d'envoyer
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Format d\'email invalide.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
+    
     try {
       await sendPasswordResetEmail(auth, email);
-      // Mise à jour du message ici pour prévenir pour les spams
-      setSuccess('Email envoyé ! Vérifiez vos spams 📥');
+      // On utilise un message neutre "Si ce compte existe" pour la sécurité
+      // et on prévient pour les spams comme convenu
+      setSuccess('Si ce compte existe, un mail a été envoyé. Vérifiez vos spams ! 📥');
     } catch (err: any) {
-      setError('Erreur lors de l\'envoi.');
+      console.error(err.code);
+      if (err.code === 'auth/user-not-found') {
+        setError('Aucun compte trouvé avec cet email.');
+      } else {
+        setError('Erreur lors de l\'envoi. Réessayez plus tard.');
+      }
     } finally {
       setLoading(false);
     }
