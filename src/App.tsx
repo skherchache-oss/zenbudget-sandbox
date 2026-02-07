@@ -123,7 +123,6 @@ const App: React.FC = () => {
     }
   }, [state, fbUser, authLoading, isInitializing]);
 
-  // --- ACTION : MISE À JOUR MANUELLE DE L'USER (Photo/Nom) ---
   const handleUpdateUser = (updatedUser: { name?: string; photoURL?: string | null }) => {
     setState(prev => ({
       ...prev,
@@ -139,9 +138,10 @@ const App: React.FC = () => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
   }, [state.accounts, state.activeAccountId]);
 
+  // CORRECTION : On passe à 00:00:00 pour déclencher les calculs dès le début du jour J
   const now = useMemo(() => {
     const d = new Date();
-    d.setHours(12, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
     return d;
   }, []);
 
@@ -160,12 +160,15 @@ const App: React.FC = () => {
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     const normalizedTarget = new Date(targetDate);
-    normalizedTarget.setHours(12, 0, 0, 0);
+    normalizedTarget.setHours(23, 59, 59, 999); // On prend toute la journée cible
+    
     let balance = activeAccount.transactions.reduce((acc, t) => {
       const tDate = new Date(t.date);
-      tDate.setHours(12, 0, 0, 0); 
+      // CORRECTION : On compare au début de journée pour inclure les transactions du jour même
+      tDate.setHours(0, 0, 0, 0); 
       return tDate <= normalizedTarget ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
+
     if (includeProjections) {
       const templates = activeAccount.recurringTemplates || [];
       const deletedIds = new Set(activeAccount.deletedVirtualIds || []);
@@ -174,7 +177,7 @@ const App: React.FC = () => {
         const marker = `${tpl.comment?.toLowerCase().trim() || ''}-${tpl.amount}`;
         if (paidMarkers.has(marker)) return;
         const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
-        const vDate = new Date(currentYear, currentMonth, day, 12, 0, 0);
+        const vDate = new Date(currentYear, currentMonth, day, 0, 0, 0); // CORRECTION : 00h00
         const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
         if (vDate <= normalizedTarget && !deletedIds.has(vId)) {
           balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
@@ -205,7 +208,7 @@ const App: React.FC = () => {
         return {
           id: vId, amount: tpl.amount, type: tpl.type, categoryId: tpl.categoryId,
           comment: tpl.comment || (tpl.type === 'INCOME' ? 'Revenu fixe' : 'Charge fixe'),
-          date: new Date(currentYear, currentMonth, day, 12, 0, 0).toISOString(),
+          date: new Date(currentYear, currentMonth, day, 0, 0, 0).toISOString(), // CORRECTION : 00h00
           isRecurring: true, templateId: tpl.id
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
@@ -244,7 +247,6 @@ const App: React.FC = () => {
     }
   };
 
-  // --- RÉCUPÉRATION PHOTO HD POUR LE HEADER ---
   const headerPhoto = (fbUser && localStorage.getItem(`user_photo_hd_${fbUser.uid}`)) || state.user.photoURL;
 
   if (authLoading) return <div className="h-screen flex items-center justify-center bg-slate-950"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
@@ -262,7 +264,6 @@ const App: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* L'image de profil utilise désormais headerPhoto (HD si disponible) */}
               <div 
                 onClick={() => setActiveView('SETTINGS')} 
                 className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden cursor-pointer active:scale-90 transition-transform bg-slate-50 flex items-center justify-center"
@@ -316,7 +317,8 @@ const App: React.FC = () => {
               )}
               {activeView === 'RECURRING' && (
                 <RecurringManager 
-                  recurringTemplates={activeAccount?.recurringTemplates || []} categories={state.categories}
+                  recurringTemplates={activeAccount?.recurringTemplates || []} 
+                  categories={state.categories}
                   onUpdate={(templates) => setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === activeAccount.id ? { ...a, recurringTemplates: templates } : a) }))}
                   totalBalance={projectedBalance}
                   month={currentMonth}

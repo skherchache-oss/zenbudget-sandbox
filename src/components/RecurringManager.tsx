@@ -13,6 +13,47 @@ interface RecurringManagerProps {
   onMonthChange: (offset: number) => void;
 }
 
+// --- COMPOSANT GRAPHIQUE CAMEMBERT (SVG) ---
+const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: string }[], total: number }> = ({ data, total }) => {
+  let cumulativePercent = 0;
+
+  function getCoordinatesForPercent(percent: number) {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+  }
+
+  return (
+    <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
+      <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
+        {total === 0 ? (
+          <circle cx="0" cy="0" r="1" fill="#f1f5f9" />
+        ) : (
+          data.map((slice, i) => {
+            const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+            cumulativePercent += slice.value / total;
+            const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+            const largeArcFlag = slice.value / total > 0.5 ? 1 : 0;
+            const pathData = [
+              `M ${startX} ${startY}`,
+              `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+              `L 0 0`,
+            ].join(' ');
+            return <path key={i} d={pathData} fill={slice.color} />;
+          })
+        )}
+        <circle cx="0" cy="0" r="0.75" fill="white" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Total Fixe</span>
+        <span className="text-2xl font-black text-slate-900 leading-none">
+          {Math.round(total).toLocaleString('fr-FR')}€
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const RecurringItem: React.FC<{
   tpl: RecurringTemplate;
   category?: Category;
@@ -49,7 +90,7 @@ const RecurringItem: React.FC<{
       </div>
 
       <div className={`relative bg-white flex items-center gap-4 p-4 transition-transform duration-300 ease-out z-10 select-none flex-1 cursor-pointer h-full ${!tpl.isActive ? 'opacity-50 grayscale' : ''}`} style={{ transform: `translateX(${isOpen ? -threshold : 0}px)` }} onClick={() => onToggleReveal()}>
-        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-xl shrink-0 shadow-inner">{category?.icon || '📦'}</div>
+        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-xl shrink-0 shadow-inner" style={{ borderLeft: `4px solid ${category?.color || '#cbd5e1'}` }}>{category?.icon || '📦'}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-black text-slate-800 text-[13px] truncate uppercase tracking-tight">{category?.name}</span>
@@ -77,11 +118,26 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   const [comment, setComment] = useState('');
   const [day, setDay] = useState('1');
 
-  const totalRecurringExpenses = useMemo(() => {
-    return recurringTemplates
-      .filter(t => t.isActive && t.type === 'EXPENSE')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  }, [recurringTemplates]);
+  // --- CALCULS DES DONNÉES DU GRAPHIQUE ---
+  const { chartData, totalRecurringExpenses } = useMemo(() => {
+    const activeExpenses = recurringTemplates.filter(t => t.isActive && t.type === 'EXPENSE');
+    const total = activeExpenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+    const grouped = activeExpenses.reduce((acc, tpl) => {
+      const cat = categories.find(c => c.id === tpl.categoryId);
+      const catId = cat?.id || 'other';
+      if (!acc[catId]) {
+        acc[catId] = { name: cat?.name || 'Autre', value: 0, color: cat?.color || '#94a3b8' };
+      }
+      acc[catId].value += Math.abs(tpl.amount);
+      return acc;
+    }, {} as Record<string, { name: string, value: number, color: string }>);
+
+    return { 
+      chartData: Object.values(grouped).sort((a, b) => b.value - a.value), 
+      totalRecurringExpenses: total 
+    };
+  }, [recurringTemplates, categories]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,13 +166,19 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic">Flux Fixes</h2>
       </div>
 
-      <div className="bg-indigo-600 rounded-[32px] p-6 shadow-xl text-white relative overflow-hidden mb-2">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16" />
-        <div className="relative z-10">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Total charges récurrentes</span>
-          <div className="text-3xl font-black tracking-tighter mt-1">
-            {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(totalRecurringExpenses)}€
-          </div>
+      {/* --- SECTION GRAPHIQUE --- */}
+      <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 mb-2 flex flex-col items-center">
+        <RecurringPieChart data={chartData} total={totalRecurringExpenses} />
+        
+        {/* Légende rapide */}
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-8">
+          {chartData.slice(0, 4).map((cat, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">{cat.name}</span>
+            </div>
+          ))}
+          {chartData.length > 4 && <span className="text-[10px] font-black text-slate-300">...</span>}
         </div>
       </div>
 
