@@ -64,7 +64,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
     setSuccess('');
     try {
       await sendPasswordResetEmail(auth, email);
-      setSuccess('Email de récupération envoyé !');
+      // Mise à jour du message ici pour prévenir pour les spams
+      setSuccess('Email envoyé ! Vérifiez vos spams 📥');
     } catch (err: any) {
       setError('Erreur lors de l\'envoi.');
     } finally {
@@ -130,7 +131,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             )}
 
             {success && (
-              <div className="bg-emerald-50 text-emerald-500 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 text-center">
+              <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 text-center animate-pulse">
                 {success}
               </div>
             )}
