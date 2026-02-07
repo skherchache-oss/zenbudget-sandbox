@@ -59,30 +59,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
       setError('Entrez votre email ci-dessus d\'abord.');
       return;
     }
-
-    // Petite vérification de format avant d'envoyer
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Format d\'email invalide.');
       return;
     }
-
     setLoading(true);
     setError('');
     setSuccess('');
-    
     try {
       await sendPasswordResetEmail(auth, email);
-      // On utilise un message neutre "Si ce compte existe" pour la sécurité
-      // et on prévient pour les spams comme convenu
-      setSuccess('Si ce compte existe, un mail a été envoyé. Vérifiez vos spams ! 📥');
+      setSuccess('Si ce compte existe, un mail a été envoyé (vérifiez vos spams) 📥');
     } catch (err: any) {
-      console.error(err.code);
-      if (err.code === 'auth/user-not-found') {
-        setError('Aucun compte trouvé avec cet email.');
-      } else {
-        setError('Erreur lors de l\'envoi. Réessayez plus tard.');
-      }
+      setError('Erreur lors de l\'envoi.');
     } finally {
       setLoading(false);
     }
@@ -115,7 +104,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             {!isLogin && (
               <input
                 type="text"
-                placeholder="Nom complet"
+                placeholder="Nom de profil (ex: ZenMaster)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
@@ -171,6 +160,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               )}
             </div>
           </form>
+
+          {/* Section Réassurance Sécurité */}
+          <div className="mb-6 px-2">
+            <div className="flex items-center justify-center gap-2 mb-1.5 opacity-60">
+              <svg className="w-3 h-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 5.052 3.13 9.373 7.554 11.11a11.99 11.99 0 007.554-11.11c0-1.308-.21-2.565-.598-3.744A11.959 11.959 0 0112 2.714z" />
+              </svg>
+              <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 italic">Sécurité Garantie</span>
+            </div>
+            <p className="text-[7.5px] text-slate-400 font-bold leading-tight text-center">
+              Aucune connexion bancaire requise. Vos données sont cryptées sur les serveurs sécurisés de Google Cloud. ZenBudget ne partage jamais vos informations.
+            </p>
+          </div>
 
           <div className="space-y-4 flex flex-col mb-6">
             <button 
