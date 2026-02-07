@@ -78,36 +78,39 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-slate-950 font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden px-6">
+    // Fond passé en blanc pur (bg-white) et suppression des gradients sombres
+    <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-white font-sans overflow-hidden px-6">
       
-      <div className="w-full max-w-[420px] flex flex-col items-center">
+      {/* Conteneur agrandi pour Desktop/Tablette (max-w-[480px]) */}
+      <div className="w-full max-w-[480px] flex flex-col items-center">
         
-        <div className="w-full bg-white/95 backdrop-blur-2xl p-10 sm:p-12 rounded-[50px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] border border-white/20 flex flex-col justify-center transform transition-all">
+        {/* Suppression du fond noir du logo pour un look plus "Clean" sur fond blanc */}
+        <div className="w-full p-8 sm:p-12 flex flex-col justify-center transform transition-all">
           
-          <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-xl flex items-center justify-center mb-6 mx-auto transform -rotate-6 shrink-0 mt-2">
+          <div className="w-20 h-20 bg-slate-900 rounded-[28px] shadow-xl flex items-center justify-center mb-8 mx-auto transform -rotate-6 shrink-0 mt-2">
             <IconLogo className="w-12 h-12 text-white" />
           </div>
           
-          <div className="text-center space-y-1 mb-8">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">
+          <div className="text-center space-y-1 mb-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600">
                 {isLogin ? getGreeting() : "Bienvenue"}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter italic text-slate-900 leading-none">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tighter italic text-slate-900 leading-none">
               {isLogin ? 'ZenBudget' : 'Créer un espace'}
             </h1>
-            <p className="text-slate-400 text-[11px] font-medium leading-relaxed px-4">
+            <p className="text-slate-500 text-[12px] font-medium leading-relaxed px-4 mt-2">
               {isLogin ? 'Retrouvez votre sérénité financière.' : 'Rejoignez ZenBudget.'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3 mb-6">
+          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
             {!isLogin && (
               <input
                 type="text"
                 placeholder="Nom de profil (ex: ZenMaster)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
                 required
               />
             )}
@@ -116,7 +119,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
               required
             />
             <input
@@ -124,36 +127,36 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
               placeholder="Mot de passe"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+              className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
               required={isLogin}
             />
 
             {error && (
-              <div className="bg-rose-50 text-rose-500 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 text-center">
+              <div className="bg-rose-50 text-rose-600 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-100 text-center">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-emerald-50 text-emerald-600 p-2 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 text-center animate-pulse">
+              <div className="bg-emerald-50 text-emerald-600 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 text-center animate-pulse">
                 {success}
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-3 pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-indigo-600 text-white rounded-[18px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[10px] uppercase tracking-[0.2em] disabled:opacity-50"
+                className="w-full py-4.5 bg-indigo-600 text-white rounded-[22px] font-black shadow-lg shadow-indigo-100 active:scale-95 hover:bg-indigo-700 transition-all text-[11px] uppercase tracking-[0.2em] disabled:opacity-50"
               >
-                {loading ? 'Connexion...' : isLogin ? 'Se connecter' : 'Créer mon compte'}
+                {loading ? 'Traitement...' : isLogin ? 'Se connecter' : 'Créer mon compte'}
               </button>
 
               {isLogin && (
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="w-full text-[8px] font-black uppercase tracking-widest text-slate-300 hover:text-indigo-400 transition-colors py-1"
+                  className="w-full text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors py-1"
                 >
                   Mot de passe oublié ?
                 </button>
@@ -161,40 +164,41 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
             </div>
           </form>
 
-          {/* Section Réassurance Sécurité */}
-          <div className="mb-6 px-2">
-            <div className="flex items-center justify-center gap-2 mb-1.5 opacity-60">
-              <svg className="w-3 h-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          {/* Section Réassurance Sécurité agrandie à peinnneee */}
+          <div className="mb-10 px-4 py-4 bg-slate-50/50 rounded-3xl border border-slate-100">
+            <div className="flex items-center justify-center gap-2 mb-2 opacity-80">
+              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.744c0 5.052 3.13 9.373 7.554 11.11a11.99 11.99 0 007.554-11.11c0-1.308-.21-2.565-.598-3.744A11.959 11.959 0 0112 2.714z" />
               </svg>
-              <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 italic">Sécurité Garantie</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Sécurité Garantie</span>
             </div>
-            <p className="text-[7.5px] text-slate-400 font-bold leading-tight text-center">
+            <p className="text-[9.5px] text-slate-500 font-bold leading-relaxed text-center">
               Aucune connexion bancaire requise. Vos données sont cryptées sur les serveurs sécurisés de Google Cloud. ZenBudget ne partage jamais vos informations.
             </p>
           </div>
 
-          <div className="space-y-4 flex flex-col mb-6">
+          <div className="space-y-5 flex flex-col mb-8">
             <button 
               type="button"
               onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
-              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors mx-auto"
+              className="text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors mx-auto"
             >
-              {isLogin ? "Créer un compte" : "Se connecter"}
+              {isLogin ? "Créer un compte gratuit" : "Déjà un compte ? Connexion"}
             </button>
 
-            <div className="flex items-center gap-4 px-8">
-              <div className="h-[1px] bg-slate-100 flex-1"></div>
-              <span className="text-[9px] font-black text-slate-300 uppercase">Ou</span>
-              <div className="h-[1px] bg-slate-100 flex-1"></div>
+            <div className="flex items-center gap-4 px-12">
+              <div className="h-[1px] bg-slate-200 flex-1"></div>
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">Ou</span>
+              <div className="h-[1px] bg-slate-200 flex-1"></div>
             </div>
 
+            {/* Bouton Google avec texte "Continuer avec Google" */}
             <button 
               type="button"
               onClick={loginWithGoogle} 
-              className="w-full py-3.5 bg-white border border-slate-200 rounded-[18px] shadow-sm flex items-center justify-center gap-3 font-black hover:bg-slate-50 active:scale-95 transition-all text-[10px] uppercase tracking-tighter text-slate-700"
+              className="w-full py-4 bg-white border-2 border-slate-100 rounded-[22px] shadow-sm flex items-center justify-center gap-3 font-black hover:bg-slate-50 active:scale-95 transition-all text-[11px] uppercase tracking-tight text-slate-700"
             >
-              <div className="w-4 h-4 shrink-0">
+              <div className="w-5 h-5 shrink-0">
                 <svg viewBox="0 0 24 24" className="w-full h-full">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -202,20 +206,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
                 </svg>
               </div>
-              Google
+              Continuer avec Google
             </button>
           </div>
 
           <button 
             type="button"
             onClick={onLocalMode} 
-            className="w-full py-4 bg-slate-900 text-white rounded-[18px] text-[9px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 active:scale-95 transition-all mb-2"
+            className="w-full py-4.5 bg-slate-900 text-white rounded-[22px] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 active:scale-95 transition-all mb-4"
           >
-            Mode Invité
+            Découvrir en mode Invité
           </button>
         </div>
 
-        <p className="mt-6 text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em] opacity-40">
+        <p className="mt-4 mb-8 text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">
           ZenBudget — Est. 2026
         </p>
         
