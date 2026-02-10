@@ -211,17 +211,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     if (file && user) {
       setIsUploading(true);
       try {
-        // 1. Version HD (512px) pour le stockage local (affichage net)
         const hdUrl = await compressImage(file, 512, 0.9);
         localStorage.setItem(`user_photo_hd_${user.uid}`, hdUrl);
-        
-        // 2. Version Tiny (40px) pour Firebase (synchronisation cloud légère)
         const tinyUrl = await compressImage(file, 40, 0.4);
-        
-        // Mise à jour locale immédiate avec la HD
         onUpdateUser({ photoURL: hdUrl });
-
-        // Mise à jour Firebase avec la Tiny
         try {
           await updateProfile(user, { photoURL: tinyUrl });
         } catch (e) {
@@ -280,17 +273,19 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
 
-          <div className="flex flex-col items-center w-full min-w-0">
+          <div className="flex flex-col items-center justify-center w-full min-w-0 text-center">
             {isEditingUserName ? (
-              <input autoFocus value={tempUserName} onChange={e => setTempUserName(e.target.value)} onBlur={handleSaveUserName} onKeyDown={e => e.key === 'Enter' && handleSaveUserName()} className="w-full max-w-[200px] bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none" />
+              <div className="w-full flex justify-center">
+                <input autoFocus value={tempUserName} onChange={e => setTempUserName(e.target.value)} onBlur={handleSaveUserName} onKeyDown={e => e.key === 'Enter' && handleSaveUserName()} className="w-full max-w-[200px] bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none" />
+              </div>
             ) : (
-              <div className="flex items-center gap-2 mb-1 cursor-pointer group" onClick={() => isRealUser && setIsEditingUserName(true)}>
+              <div className="flex items-center justify-center gap-2 mb-1 w-full cursor-pointer group" onClick={() => isRealUser && setIsEditingUserName(true)}>
                 <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">{user?.displayName || 'Utilisateur Invité'}</h3>
-                {isRealUser && <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>}
+                {isRealUser && <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>}
                 <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
               </div>
             )}
-            <p className="text-[11px] font-bold text-slate-400 truncate w-full px-4">{user?.email || 'Mode Hors-ligne'}</p>
+            <p className="text-[11px] font-bold text-slate-400 truncate w-full max-w-[250px] mx-auto">{user?.email || 'Mode Hors-ligne'}</p>
           </div>
 
           <button onClick={() => isRealUser ? onLogout() : onLogin()} className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}>
