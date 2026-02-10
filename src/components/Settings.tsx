@@ -21,7 +21,6 @@ interface SettingsProps {
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
-// Composant Popup Premium
 const PremiumModal: React.FC<{ isOpen: boolean; onClose: () => void; title: string }> = ({ isOpen, onClose, title }) => {
   if (!isOpen) return null;
   return (
@@ -70,16 +69,12 @@ const AccountItem: React.FC<{
           {isActive && <span className="text-[7px] font-black text-indigo-500 uppercase tracking-[0.1em]">Compte actif</span>} 
         </div> 
       </div> 
-
       <div className="flex items-center gap-1"> 
         <button onClick={(e) => { e.stopPropagation(); onRename(acc); }} className="p-2 text-slate-300 hover:text-indigo-600"> 
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg> 
         </button> 
         {canDelete && ( 
-          <button 
-            onClick={handleDelete} 
-            className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${isConfirmingDelete ? 'bg-red-500 text-white' : 'text-red-200 hover:text-red-400'}`} 
-          > 
+          <button onClick={handleDelete} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${isConfirmingDelete ? 'bg-red-500 text-white' : 'text-red-200 hover:text-red-400'}`}> 
             {isConfirmingDelete ? 'Sûr ?' : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>} 
           </button> 
         )} 
@@ -185,7 +180,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
-  const compressHighQuality = (file: File): Promise<string> => {
+  const compressImage = (file: File, size: number, quality: number): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -194,19 +189,18 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const SIZE = 512;
-          canvas.width = SIZE;
-          canvas.height = SIZE;
+          canvas.width = size;
+          canvas.height = size;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            const ratio = Math.max(SIZE / img.width, SIZE / img.height);
-            const x = (SIZE - img.width * ratio) / 2;
-            const y = (SIZE - img.height * ratio) / 2;
+            const ratio = Math.max(size / img.width, size / img.height);
+            const x = (size - img.width * ratio) / 2;
+            const y = (size - img.height * ratio) / 2;
             ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, SIZE, SIZE);
+            ctx.fillRect(0, 0, size, size);
             ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
           }
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          resolve(canvas.toDataURL('image/jpeg', quality));
         };
       };
     });
@@ -217,21 +211,22 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     if (file && user) {
       setIsUploading(true);
       try {
-        const highQualityUrl = await compressHighQuality(file);
-        localStorage.setItem(`user_photo_hd_${user.uid}`, highQualityUrl);
-        onUpdateUser({ photoURL: highQualityUrl });
+        // 1. Version HD (512px) pour le stockage local (affichage net)
+        const hdUrl = await compressImage(file, 512, 0.9);
+        localStorage.setItem(`user_photo_hd_${user.uid}`, hdUrl);
+        
+        // 2. Version Tiny (40px) pour Firebase (synchronisation cloud légère)
+        const tinyUrl = await compressImage(file, 40, 0.4);
+        
+        // Mise à jour locale immédiate avec la HD
+        onUpdateUser({ photoURL: hdUrl });
 
-        const canvas = document.createElement('canvas');
-        canvas.width = 40; canvas.height = 40;
-        const img = new Image();
-        img.src = highQualityUrl;
-        img.onload = async () => {
-           canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
-           const tiny = canvas.toDataURL('image/jpeg', 0.2);
-           try {
-             await updateProfile(user, { photoURL: tiny });
-           } catch (e) { }
-        };
+        // Mise à jour Firebase avec la Tiny
+        try {
+          await updateProfile(user, { photoURL: tinyUrl });
+        } catch (e) {
+          console.warn("Firebase sync error, local HD preserved.");
+        }
       } catch (err) {
         console.error("Erreur photo:", err);
       } finally {
@@ -244,7 +239,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const handleRemovePhoto = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user || isUploading) return;
-    
     if (confirm("Supprimer la photo de profil ?")) {
       setIsUploading(true);
       try {
@@ -264,7 +258,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
-      
       <PremiumModal isOpen={premiumModal.open} onClose={() => setPremiumModal({open: false, title: ""})} title={premiumModal.title} />
 
       {/* PROFIL SECTION */}
@@ -335,7 +328,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               )}
             </div>
           ))} 
-           
+          
           {editingAccountId && ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mb-2"> 
               <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-slate-50 p-2.5 rounded-xl mb-2 text-xs font-bold outline-none" /> 
