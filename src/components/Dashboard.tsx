@@ -19,7 +19,6 @@ interface DashboardProps {
   projectedBalance: number;
   carryOver: number;
   onAddTransaction: (t: Omit<Transaction, 'id'>) => void;
-  // Ajout des fonctions de changement de mois si elles sont gérées par le parent
   onPrevMonth: () => void;
   onNextMonth: () => void;
 }
@@ -32,9 +31,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [aiAdvice, setAiAdvice] = useState<string>("Analyse financière Zen...");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false); // État pour l'export CSV
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Date formatée pour le titre
   const currentDate = new Date(year, month);
 
   useEffect(() => {
@@ -108,49 +107,27 @@ const Dashboard: React.FC<DashboardProps> = ({
     }).sort((a, b) => b.value - a.value);
   }, [transactions, categories, stats.expenses]);
 
-  const handleExportCSV = () => {
-    const summaryRows = [
-      ["RESUME DU COMPTE", activeAccount.name],
-      ["Periode", `${month + 1}/${year}`],
-      ["Solde Bancaire", checkingAccountBalance.toFixed(2)],
-      ["Disponible Reel", availableBalance.toFixed(2)],
-      ["Total Revenus (+)", stats.income.toFixed(2)],
-      ["Total Depenses (-)", stats.expenses.toFixed(2)],
-      ["", ""],
-      ["DETAILS DES TRANSACTIONS"],
-      ["Date", "Categorie", "Commentaire", "Type", "Montant"]
-    ];
-    const transactionRows = transactions.map(t => [
-      new Date(t.date).toLocaleDateString('fr-FR'),
-      categories.find(c => c.id === t.categoryId)?.name || 'Inconnue',
-      t.comment || '',
-      t.type === 'INCOME' ? 'Entree' : 'Sortie',
-      t.amount.toFixed(2)
-    ]);
-    const csvString = [...summaryRows, ...transactionRows].map(row => row.join(";")).join("\n");
-    const blob = new Blob(["\ufeff" + csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `ZenBudget_${activeAccount.name.replace(/\s+/g, '_')}.csv`);
-    link.click();
-  };
-
   const formatVal = (v: number) => new Intl.NumberFormat('fr-FR', { 
     minimumFractionDigits: 2,
     maximumFractionDigits: 2 
   }).format(v);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Bonjour ✨";
-    if (hour < 18) return "Bel après-midi 🌤️";
-    return "Bonsoir 🌙";
-  };
-
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* HEADER AVEC SÉLECTEUR DE MOIS RESTAURÉ */}
+      {/* Modale Premium Export CSV */}
+      {showPremiumModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in zoom-in duration-200">
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-4">📊</div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Export CSV</h3>
+            <p className="text-sm text-slate-500 font-medium mb-6">L'exportation de vos rapports vers Excel sera disponible prochainement dans ZenBudget Premium.</p>
+            <button onClick={() => setShowPremiumModal(false)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">D'accord ✨</button>
+          </div>
+        </div>
+      )}
+
+      {/* HEADER */}
       <div className="pt-4 flex justify-between items-start">
         <div className="flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -199,19 +176,22 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        {/* BOUTON EXPORT CSV BRIDÉ */}
         <button 
-          onClick={handleExportCSV} 
-          className="flex flex-col items-center gap-1 group transition-all"
+          onClick={() => setShowPremiumModal(true)} 
+          className="flex flex-col items-center gap-1 group transition-all opacity-80"
         >
-          <div className="w-11 h-11 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-100 flex items-center justify-center transition-all active:scale-90">
+          <div className="relative w-11 h-11 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 group-hover:text-amber-600 group-hover:border-amber-100 flex items-center justify-center transition-all active:scale-90">
             <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
+            <div className="absolute -top-1 -right-1 text-[10px]">👑</div>
           </div>
-          <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-indigo-600 transition-colors">Export CSV</span>
+          <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-amber-500 transition-colors">Export CSV</span>
         </button>
       </div>
 
+      {/* RESTE DU DASHBOARD (Inchangé pour ne rien casser) */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
@@ -237,7 +217,6 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className={`text-2xl font-black ${carryOver >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                 {formatVal(carryOver)}€
               </div>
-              {/* LE BOUTON + A ÉTÉ SUPPRIMÉ POUR ÉVITER LES DOUBLONS DE CALCUL */}
             </div>
           </div>
         </div>

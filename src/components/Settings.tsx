@@ -21,6 +21,21 @@ interface SettingsProps {
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
+// Composant pour la popup Premium
+const PremiumModal: React.FC<{ isOpen: boolean; onClose: () => void; title: string }> = ({ isOpen, onClose, title }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300">
+      <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
+        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-4">👑</div>
+        <h3 className="text-xl font-black text-slate-900 mb-2">{title}</h3>
+        <p className="text-sm text-slate-500 font-medium mb-6">Cette fonctionnalité sera disponible prochainement dans l'abonnement ZenBudget Premium.</p>
+        <button onClick={onClose} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">D'accord ✨</button>
+      </div>
+    </div>
+  );
+};
+
 const AccountItem: React.FC<{ 
   acc: BudgetAccount; 
   isActive: boolean; 
@@ -82,6 +97,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [isUploading, setIsUploading] = useState(false);
   const [isEditingUserName, setIsEditingUserName] = useState(false);
   const [tempUserName, setTempUserName] = useState(user?.displayName || '');
+  const [premiumModal, setPremiumModal] = useState<{open: boolean, title: string}>({open: false, title: ""});
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +112,12 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   ); 
 
   const handleCreateAccount = () => { 
+    // Blocage Premium si plus de 1 compte
+    if (state.accounts.length >= 1) {
+        setPremiumModal({ open: true, title: "Multi-comptes" });
+        setIsAddingAccount(false);
+        return;
+    }
     if (!newAccName.trim()) return; 
     const newAcc = createDefaultAccount(user?.uid || 'local-user'); 
     newAcc.name = newAccName.trim(); 
@@ -205,11 +227,11 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         const img = new Image();
         img.src = highQualityUrl;
         img.onload = async () => {
-           canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
-           const tiny = canvas.toDataURL('image/jpeg', 0.2);
-           try {
-             await updateProfile(user, { photoURL: tiny });
-           } catch (e) { }
+            canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
+            const tiny = canvas.toDataURL('image/jpeg', 0.2);
+            try {
+              await updateProfile(user, { photoURL: tiny });
+            } catch (e) { }
         };
       } catch (err) {
         console.error("Erreur photo:", err);
@@ -244,6 +266,12 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
+      <PremiumModal 
+        isOpen={premiumModal.open} 
+        onClose={() => setPremiumModal({open: false, title: ""})} 
+        title={premiumModal.title} 
+      />
+
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           
@@ -330,6 +358,26 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
+      {/* NOUVELLE SECTION COLLABORATION */}
+      <section>
+        <SectionTitle title="Collaboration" />
+        <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
+          <button 
+            onClick={() => setPremiumModal({ open: true, title: "Budgets Partagés" })}
+            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group opacity-60"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-sm">🤝</div>
+              <div className="flex flex-col items-start">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 leading-none mb-1">Inviter un partenaire</span>
+                <span className="text-[7px] font-black text-amber-500 uppercase tracking-widest">Premium 👑</span>
+              </div>
+            </div>
+            <svg className="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+      </section>
+
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
@@ -361,8 +409,12 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           )} 
 
           {!isAddingAccount ? ( 
-            <button onClick={() => setIsAddingAccount(true)} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-400 transition-all"> 
-              <IconPlus className="w-3 h-3" /> Ajouter un compte 
+            <button 
+                onClick={() => state.accounts.length >= 1 ? setPremiumModal({open: true, title: "Multi-comptes"}) : setIsAddingAccount(true)} 
+                className={`w-full py-3.5 border-2 border-dashed border-slate-100 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 transition-all ${state.accounts.length >= 1 ? 'text-amber-500 opacity-60' : 'text-slate-300'}`}
+            > 
+              <IconPlus className="w-3 h-3" /> 
+              {state.accounts.length >= 1 ? "Ajouter un compte (Premium 👑)" : "Ajouter un compte"}
             </button> 
           ) : ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mt-2"> 
@@ -445,7 +497,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
             Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
           </p> 
-          <button      
+          <button       
             onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}   
             className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
           > 
@@ -454,7 +506,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
 
         <div className="flex flex-col gap-2">
-          <button      
+          <button       
             onClick={onReset}      
             className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl" 
           > 
@@ -462,7 +514,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           </button> 
 
           {isRealUser && (
-            <button      
+            <button       
               onClick={handleDeleteUserAccount}      
               className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
             > 
