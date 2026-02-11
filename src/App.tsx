@@ -76,9 +76,6 @@ const App: React.FC = () => {
     };
   }, [showAddModal]);
 
-  /**
-   * MODIFICATION ICI : On utilise selectedDay si présent pour le bouton "+"
-   */
   const openAddModal = (date?: string, editItem?: Transaction | null) => {
     if (editItem) {
       setEditingTransaction(editItem);
@@ -89,7 +86,6 @@ const App: React.FC = () => {
     if (date) {
       setModalInitialDate(date);
     } else if (!editItem) {
-      // Si on clique sur le "+" et qu'un jour est sélectionné sur le calendrier
       if (selectedDay) {
         const d = new Date(currentYear, currentMonth, selectedDay, 12, 0, 0);
         setModalInitialDate(d.toISOString());
@@ -273,11 +269,10 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
       <div className="w-full max-w-[768px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_80px_rgba(0,0,0,0.6)] border-x border-white/5">
         
-        {/* HEADER MODIFIÉ AVEC TON LOGO ET TITRE NOIR */}
+        {/* HEADER ACTUALISÉ */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-4 shrink-0 z-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-               {/* Affichage de ton nouveau logo ZB-logo-192.png */}
                <div className="relative">
                  <img 
                    src="/ZB-logo-192.png" 

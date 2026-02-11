@@ -28,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSwitchAccount, checkingAccountBalance, availableBalance, projectedBalance, carryOver,
   month, year, onPrevMonth, onNextMonth
 }) => {
-  const [aiAdvice, setAiAdvice] = useState<string>("Analyse financière Zen...");
+  const [aiAdvice, setAiAdvice] = useState<string>("Analyse de vos énergies financières...");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false); 
@@ -46,35 +46,62 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- LOGIQUE GENERATIVE AI DYNAMIQUE ---
   const fetchAiAdvice = async () => {
+    // Récupération de la clé API
     const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
-    if (!API_KEY || loadingAdvice) return;
+    
+    if (!API_KEY) {
+      setAiAdvice("Configurez votre clé API pour débloquer les ZenTips. ✨");
+      return;
+    }
+
+    if (loadingAdvice) return;
     setLoadingAdvice(true);
     
     try {
+      // Préparation du contexte pour l'IA
+      const totalExpenses = transactions
+        .filter(t => t.type === 'EXPENSE')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const context = `Solde: ${availableBalance}€, Dépenses ce mois: ${totalExpenses}€, Mois: ${format(currentDate, 'MMMM', { locale: fr })}.`;
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "Donne un conseil financier zen très court (max 60 caractères) en français." }] }]
+          contents: [{ 
+            parts: [{ 
+              text: `Tu es un coach financier zen et minimaliste. 
+              Donne un conseil unique, percutant et varié (change de style à chaque fois : humour, sagesse, ou action) basé sur ce contexte : ${context}. 
+              Maximum 65 caractères. Pas de guillemets, pas de gras. Réponds uniquement le conseil.` 
+            }] 
+          }]
         })
       });
+
       const data = await response.json();
-      if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        setAiAdvice(data.candidates[0].content.parts[0].text.trim());
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (text) {
+        // Nettoyage des éventuels guillemets ou retours à la ligne
+        setAiAdvice(text.replace(/["']/g, "").trim());
       } else {
-        setAiAdvice("ZenTip : Votre budget est sous contrôle. ✨");
+        setAiAdvice("La clarté vient avec la patience. Votre budget est sain. ✨");
       }
     } catch (err) {
-      setAiAdvice("ZenTip : Votre budget est sous contrôle. ✨");
+      console.error("Erreur Gemini:", err);
+      setAiAdvice("Prenez une grande inspiration, vos comptes sont à l'abri. ✨");
     } finally {
       setLoadingAdvice(false);
     }
   };
 
+  // Déclenchement au changement de compte OU de mois
   useEffect(() => {
     fetchAiAdvice();
-  }, [activeAccount.id]);
+  }, [activeAccount.id, month, year]);
 
   const stats = useMemo(() => {
     let income = 0, expenses = 0;
@@ -223,15 +250,19 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* ZEN TIP BOX - Sans le titre "Conseil de l'IA" */}
+      {/* ZEN TIP BOX DYNAMIQUE */}
       <div 
-        className="bg-indigo-50/50 backdrop-blur-sm p-6 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-colors" 
+        className="bg-indigo-50/50 backdrop-blur-sm p-6 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-all active:scale-95" 
         onClick={() => !loadingAdvice && fetchAiAdvice()}
       >
         <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0">
-          {loadingAdvice ? <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /> : "💡"}
+          {loadingAdvice ? (
+            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            "💡"
+          )}
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-[13px] font-bold text-slate-700 leading-snug italic">
             {aiAdvice}
           </p>
