@@ -115,7 +115,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* Modale Premium Export CSV */}
       {showPremiumModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in zoom-in duration-200">
           <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
@@ -127,10 +126,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* HEADER AVEC NOUVEAU LOGO */}
+      {/* HEADER AVEC LOGO EN HAUT DE PAGE */}
       <div className="pt-4 flex justify-between items-start">
         <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <button onClick={onPrevMonth} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
               <ChevronLeft className="w-4 h-4 text-slate-400" />
             </button>
@@ -142,19 +141,26 @@ const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
           
-          {/* ZONE LOGO + TITRE NOIR */}
-          <div className="flex items-center gap-2.5 mt-1">
-            <img 
-              src="/ZB-logo-192.png" 
-              alt="Logo ZenBudget" 
-              className="w-9 h-9 rounded-xl shadow-sm border border-slate-100"
-            />
-            <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">
-              ZenBudget
-            </h2>
+          {/* NOUVEL AFFICHAGE : LOGO + TITRE NOIR */}
+          <div className="flex items-center gap-3">
+            <div className="relative group">
+               {/* Un petit halo derrière pour la visibilité si besoin */}
+              <div className="absolute inset-0 bg-slate-900 rounded-xl blur-[2px] opacity-10 group-hover:opacity-20 transition-opacity" />
+              <img 
+                src="/ZB-logo-192.png" 
+                alt="ZenBudget Logo" 
+                className="relative w-11 h-11 rounded-xl shadow-md border border-slate-200 object-cover"
+              />
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">
+                ZenBudget
+              </h2>
+              <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-indigo-500 mt-1">Finance Personnelle</span>
+            </div>
           </div>
           
-          <div className="relative mt-3" ref={menuRef}>
+          <div className="relative mt-4" ref={menuRef}>
             <button 
               onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
               className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
@@ -187,7 +193,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* BOUTON EXPORT CSV */}
         <button 
           onClick={() => setShowPremiumModal(true)} 
           className="flex flex-col items-center gap-1 group transition-all opacity-80"
@@ -202,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      {/* DASHBOARD CONTENT */}
+      {/* RESTE DU CONTENU */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
@@ -233,6 +238,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* AI TIP BOX */}
       <div className="bg-indigo-50/50 backdrop-blur-sm p-5 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-colors" onClick={() => !loadingAdvice && fetchAiAdvice()}>
         <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0">
           {loadingAdvice ? <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /> : "💡"}
@@ -243,6 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* CHART BOX */}
       <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
         <div className="flex flex-col items-center mb-10">
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
@@ -283,6 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* PROJECTION BOX */}
       <div className={`p-8 rounded-[40px] border-2 flex justify-between items-center transition-all ${projectedBalance < 0 ? 'bg-rose-50 border-rose-100' : 'bg-white border-slate-50 shadow-sm'}`}>
         <div>
           <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] block mb-1">Projection fin de mois</span>
