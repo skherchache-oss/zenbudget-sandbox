@@ -46,20 +46,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIQUE GENERATIVE AI AVEC CACHE ---
+  // --- LOGIQUE GENERATIVE AI (URL CORRIGÉE + CACHE + CLEANUP) ---
   const fetchAiAdvice = async (force: boolean = false) => {
-    const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
+    // Récupération sécurisée de la clé
+    const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || "";
     
     if (!API_KEY) {
-      setAiAdvice("Configurez votre clé API pour débloquer les ZenTips. ✨");
+      setAiAdvice("Clé API manquante dans Vercel. ✨");
       return;
     }
 
-    // Clé unique pour le cache basée sur le compte et le mois
+    // Gestion du Cache
     const cacheKey = `zentip_${activeAccount.id}_${month}_${year}`;
     const cachedAdvice = sessionStorage.getItem(cacheKey);
 
-    // Si on a un cache et qu'on ne force pas, on l'utilise
     if (cachedAdvice && !force) {
       setAiAdvice(cachedAdvice);
       return;
@@ -67,6 +67,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     if (loadingAdvice) return;
     setLoadingAdvice(true);
+    setAiAdvice("Le coach médite... ✨");
     
     try {
       const totalExpenses = transactions
@@ -74,37 +75,47 @@ const Dashboard: React.FC<DashboardProps> = ({
         .reduce((sum, t) => sum + t.amount, 0);
       
       const context = `Solde: ${availableBalance}€, Dépenses: ${totalExpenses}€, État: ${availableBalance < 0 ? 'Découvert' : 'Sain'}.`;
+      const randomSeed = Math.random().toString(36).substring(7);
 
+      // URL v1beta pour maximiser la compatibilité
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ 
             parts: [{ 
-              text: `Tu es un coach financier zen. Donne un conseil court, varié et inspirant basé sur : ${context}. Max 65 caractères. Pas de guillemets.` 
+              text: `Tu es un coach financier zen. Donne un conseil très court (max 60 car.) inspirant basé sur : ${context}. Seed: ${randomSeed}. Pas de guillemets.` 
             }] 
           }]
         })
       });
 
       const data = await response.json();
+
+      if (data.error) {
+        throw new Error(`${data.error.status}`);
+      }
+
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (text) {
+        // Regex pour supprimer les guillemets résiduels
         const cleanedText = text.replace(/["']/g, "").trim();
         setAiAdvice(cleanedText);
-        // On stocke dans le cache de la session
         sessionStorage.setItem(cacheKey, cleanedText);
+      } else {
+        setAiAdvice("Votre sérénité financière est la priorité. 🧘");
       }
-    } catch (err) {
-      setAiAdvice("Le silence est d'or, comme votre gestion. ✨");
+    } catch (err: any) {
+      console.error("Erreur Gemini:", err);
+      setAiAdvice("Le silence est d'or. Réessayez plus tard. ✨");
     } finally {
       setLoadingAdvice(false);
     }
   };
 
   useEffect(() => {
-    fetchAiAdvice(); // Utilise le cache par défaut
+    fetchAiAdvice();
   }, [activeAccount.id, month, year]);
 
   const stats = useMemo(() => {
@@ -238,7 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* ZEN TIP BOX AVEC RECHARGE MANUELLE */}
+      {/* ZEN TIP BOX */}
       <div 
         className="bg-indigo-50/50 backdrop-blur-sm p-6 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-all active:scale-95" 
         onClick={() => !loadingAdvice && fetchAiAdvice(true)} 

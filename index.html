@@ -6,7 +6,6 @@
     <title>ZenBudget</title>
     
     <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/index.css">
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,13 +16,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
     
     <script>
-      // Initialisation pour Vite/Vercel
-      window.process = { 
-        env: { 
-          NODE_ENV: 'production',
-          VITE_GEMINI_API_KEY: "" 
-        } 
-      };
+      // On ne définit window.process que s'il n'existe pas pour ne pas écraser les variables de Vite/Vercel
+      if (!window.process) window.process = { env: {} };
+      if (!window.process.env) window.process.env = {};
     </script>
 
     <style>
