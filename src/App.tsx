@@ -76,12 +76,11 @@ const App: React.FC = () => {
     };
   }, [showAddModal]);
 
-  // CORRECTION MINEURE : Sécurité pour l'ajout vs édition
   const openAddModal = (date?: string, editItem?: Transaction | null) => {
     if (editItem) {
       setEditingTransaction(editItem);
     } else {
-      setEditingTransaction(null); // On s'assure de ne pas éditer si c'est un nouvel ajout
+      setEditingTransaction(null);
     }
     
     if (date) {
@@ -265,11 +264,19 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
       <div className="w-full max-w-[768px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_80px_rgba(0,0,0,0.6)] border-x border-white/5">
         
+        {/* HEADER MODIFIÉ AVEC TON LOGO ET TITRE NOIR */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-4 shrink-0 z-50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <IconLogo className="w-8 h-8" />
-              <h1 className="text-xl font-black tracking-tighter italic text-slate-800">ZenBudget</h1>
+            <div className="flex items-center gap-2.5">
+               {/* Affichage de ton nouveau logo ZB-logo-192.png */}
+               <div className="relative">
+                 <img 
+                   src="/ZB-logo-192.png" 
+                   alt="ZenBudget" 
+                   className="w-8 h-8 rounded-lg shadow-sm border border-slate-200"
+                 />
+               </div>
+               <h1 className="text-xl font-black tracking-tighter italic text-slate-900">ZenBudget</h1>
             </div>
             
             <div className="flex items-center gap-4">

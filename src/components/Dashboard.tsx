@@ -47,6 +47,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, []);
 
   const fetchAiAdvice = async () => {
+    // Utilisation de Generative AI comme spécifié dans tes préférences
     const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
     if (!API_KEY || loadingAdvice) return;
     setLoadingAdvice(true);
@@ -126,10 +127,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* HEADER AVEC LOGO EN HAUT DE PAGE */}
-      <div className="pt-4 flex justify-between items-start">
+      {/* HEADER DU DASHBOARD : ÉPURÉ POUR ÉVITER LE DOUBLON AVEC LE HEADER GLOBAL */}
+      <div className="pt-2 flex justify-between items-end">
         <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <button onClick={onPrevMonth} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
               <ChevronLeft className="w-4 h-4 text-slate-400" />
             </button>
@@ -141,55 +142,41 @@ const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
           
-          {/* NOUVEL AFFICHAGE : LOGO + TITRE NOIR */}
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-               {/* Un petit halo derrière pour la visibilité si besoin */}
-              <div className="absolute inset-0 bg-slate-900 rounded-xl blur-[2px] opacity-10 group-hover:opacity-20 transition-opacity" />
-              <img 
-                src="/ZB-logo-192.png" 
-                alt="ZenBudget Logo" 
-                className="relative w-11 h-11 rounded-xl shadow-md border border-slate-200 object-cover"
-              />
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">
-                ZenBudget
-              </h2>
-              <span className="text-[8px] font-bold uppercase tracking-[0.3em] text-indigo-500 mt-1">Finance Personnelle</span>
-            </div>
-          </div>
-          
-          <div className="relative mt-4" ref={menuRef}>
-            <button 
-              onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
-            >
-              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-                {activeAccount.name}
-              </span>
-              {allAccounts.length > 1 && (
-                <svg className={`w-3 h-3 text-slate-400 transition-transform duration-300 ${isAccountMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                </svg>
-              )}
-            </button>
+          <div className="flex flex-col">
+            <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">
+              Vue d'ensemble
+            </h2>
+            <div className="relative mt-3" ref={menuRef}>
+              <button 
+                onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
+              >
+                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+                  {activeAccount.name}
+                </span>
+                {allAccounts.length > 1 && (
+                  <svg className={`w-3 h-3 text-slate-400 transition-transform duration-300 ${isAccountMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </button>
 
-            {isAccountMenuOpen && (
-              <div className="absolute left-0 mt-2 w-max min-w-[180px] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden fade-in py-1">
-                {allAccounts.map(acc => (
-                  <button
-                    key={acc.id}
-                    onClick={() => { onSwitchAccount(acc.id); setIsAccountMenuOpen(false); }}
-                    className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors
-                      ${acc.id === activeAccount.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    {acc.name}
-                  </button>
-                ))}
-              </div>
-            )}
+              {isAccountMenuOpen && (
+                <div className="absolute left-0 mt-2 w-max min-w-[180px] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden fade-in py-1">
+                  {allAccounts.map(acc => (
+                    <button
+                      key={acc.id}
+                      onClick={() => { onSwitchAccount(acc.id); setIsAccountMenuOpen(false); }}
+                      className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors
+                        ${acc.id === activeAccount.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {acc.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -197,17 +184,17 @@ const Dashboard: React.FC<DashboardProps> = ({
           onClick={() => setShowPremiumModal(true)} 
           className="flex flex-col items-center gap-1 group transition-all opacity-80"
         >
-          <div className="relative w-11 h-11 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-400 group-hover:text-amber-600 group-hover:border-amber-100 flex items-center justify-center transition-all active:scale-90">
+          <div className="relative w-10 h-10 bg-white border border-slate-100 rounded-xl shadow-sm text-slate-400 group-hover:text-amber-600 group-hover:border-amber-100 flex items-center justify-center transition-all active:scale-90">
             <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <div className="absolute -top-1 -right-1 text-[10px]">👑</div>
           </div>
-          <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-amber-500 transition-colors">Export CSV</span>
+          <span className="text-[8px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-amber-500 transition-colors">Export CSV</span>
         </button>
       </div>
 
-      {/* RESTE DU CONTENU */}
+      {/* SOLDE ET CARTES PRINCIPALES */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
