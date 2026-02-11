@@ -5,8 +5,9 @@ import { MONTHS_FR } from './constants';
 import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
 
 // Firebase & Auth
-import { auth, loginWithGoogle, logout } from './firebase';
+import { auth, loginWithGoogle, logout, db } from './firebase'; // Assurez-vous que db est exporté de firebase.ts
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 // Framer Motion
 import { motion, AnimatePresence } from 'framer-motion';
@@ -99,13 +100,16 @@ const App: React.FC = () => {
 
   const sanitizeForFirebase = (obj: any): any => JSON.parse(JSON.stringify(obj));
 
-  // --- SYNCHRONISATION AUTH ---
+  // --- SYNCHRONISATION AUTH & INITIALISATION FIRESTORE ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setAuthLoading(true);
       if (firebaseUser) {
+        // 1. Tenter de récupérer les données
         const cloudData = await fetchUserData(firebaseUser);
+        
         if (cloudData && cloudData.accounts) {
+          // L'utilisateur existe déjà avec des données
           setState({
             ...cloudData,
             user: {
@@ -116,7 +120,25 @@ const App: React.FC = () => {
             }
           });
         } else {
-          setShowWelcome(true);
+          // 2. PREMIÈRE CONNEXION : Créer le document dans Firestore
+          const initialState = getInitialState();
+          const userProfile = {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Utilisateur',
+            email: firebaseUser.email || '',
+            photoURL: firebaseUser.photoURL || null
+          };
+
+          try {
+            await setDoc(doc(db, "users", firebaseUser.uid), sanitizeForFirebase({
+              ...initialState,
+              user: userProfile
+            }));
+            setState({ ...initialState, user: userProfile });
+            setShowWelcome(true);
+          } catch (error) {
+            console.error("Erreur lors de la création du profil Firestore:", error);
+          }
         }
         setFbUser(firebaseUser);
       } else {

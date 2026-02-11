@@ -3,6 +3,9 @@ import { AppState, BudgetAccount, Category } from '../types';
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
 import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
+// Importation nécessaire pour chercher l'UID via l'email
+import { db } from '../firebase'; 
+import { collection, query, where, getDocs, updateDoc, doc, arrayUnion } from 'firebase/firestore';
 
 interface SettingsProps { 
   state: AppState; 
@@ -94,6 +97,11 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [tempUserName, setTempUserName] = useState(user?.displayName || '');
   const [premiumModal, setPremiumModal] = useState<{open: boolean, title: string}>({open: false, title: ""});
   
+  // États pour l'invitation
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteStatus, setInviteStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,15 +114,52 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-3">{title}</h2> 
   ); 
 
-  const handleCreateAccount = () => { 
-    if (state.accounts.length >= 1) {
-        setPremiumModal({ open: true, title: "Multi-comptes" });
-        setIsAddingAccount(false);
+  // --- LOGIQUE PARTAGE (NOUVEAU) ---
+  const handleInvitePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim() || !activeAccount || !user) return;
+    
+    setInviteStatus('loading');
+    try {
+      // 1. Chercher l'utilisateur par son email dans la collection 'users'
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where("email", "==", inviteEmail.trim().toLowerCase()));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        alert("Cet utilisateur n'existe pas encore sur ZenBudget. Invitez-le à créer un compte !");
+        setInviteStatus('error');
         return;
+      }
+
+      const partnerId = querySnapshot.docs[0].id;
+
+      // 2. Ajouter l'UID au tableau sharedWith du compte
+      const accountDocRef = doc(db, 'accounts', activeAccount.id);
+      await updateDoc(accountDocRef, {
+        sharedWith: arrayUnion(partnerId)
+      });
+
+      setInviteStatus('success');
+      setInviteEmail('');
+      setTimeout(() => { setIsInviting(false); setInviteStatus('idle'); }, 2000);
+      alert("Partenaire ajouté avec succès ! ✨");
+    } catch (err) {
+      console.error("Erreur invitation:", err);
+      setInviteStatus('error');
     }
+  };
+
+  const handleCreateAccount = () => { 
     if (!newAccName.trim()) return; 
+    
+    // On prépare le compte avec sharedWith incluant l'utilisateur actuel
     const newAcc = createDefaultAccount(user?.uid || 'local-user'); 
     newAcc.name = newAccName.trim(); 
+    
+    // CRUCIAL : On initialise sharedWith avec l'UID du créateur
+    (newAcc as any).sharedWith = [user?.uid || 'local-user'];
+
     onUpdateAccounts([...state.accounts, newAcc]); 
     onSetActiveAccount(newAcc.id); 
     setNewAccName(''); 
@@ -316,10 +361,31 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             <div key={acc.id} className="group">
               <AccountItem acc={acc} isActive={state.activeAccountId === acc.id} onDelete={onDeleteAccount} onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} onSelect={onSetActiveAccount} canDelete={state.accounts.length > 1} /> 
               {state.activeAccountId === acc.id && (
-                <button onClick={() => setPremiumModal({ open: true, title: "Partage de compte" })} className="w-full mt-[-2px] mb-4 py-2.5 bg-white rounded-b-2xl border-x border-b border-slate-100 flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors shadow-sm">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Inviter un partenaire sur ce compte</span>
-                  <span className="text-[9px]">👑</span>
-                </button>
+                <div className="flex flex-col">
+                  {!isInviting ? (
+                    <button onClick={() => setIsInviting(true)} className="w-full mt-[-2px] mb-4 py-2.5 bg-white rounded-b-2xl border-x border-b border-slate-100 flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors shadow-sm">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-indigo-500">Inviter un partenaire sur ce compte</span>
+                      <span className="text-[9px]">🤝</span>
+                    </button>
+                  ) : (
+                    <form onSubmit={handleInvitePartner} className="mt-[-2px] mb-4 p-4 bg-indigo-50 rounded-b-2xl border-x border-b border-indigo-100 space-y-2 animate-in slide-in-from-top-2">
+                      <input 
+                        type="email" 
+                        required
+                        placeholder="Email du partenaire..." 
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        className="w-full bg-white border border-indigo-200 p-2.5 rounded-xl text-xs font-bold outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setIsInviting(false)} className="flex-1 py-2 text-[8px] font-black uppercase text-slate-400">Annuler</button>
+                        <button type="submit" disabled={inviteStatus === 'loading'} className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-[8px] font-black uppercase">
+                          {inviteStatus === 'loading' ? 'Recherche...' : 'Ajouter'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               )}
             </div>
           ))} 
@@ -335,12 +401,12 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           )} 
 
           {!isAddingAccount ? ( 
-            <button onClick={() => state.accounts.length >= 1 ? setPremiumModal({open: true, title: "Multi-comptes"}) : setIsAddingAccount(true)} className={`w-full py-3.5 border-2 border-dashed border-slate-100 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl transition-all ${state.accounts.length >= 1 ? 'text-amber-500 opacity-60 border-amber-100' : 'text-slate-300 hover:border-indigo-200 hover:text-indigo-400'}`}> 
-              <IconPlus className="w-3 h-3" /> {state.accounts.length >= 1 ? "Ajouter un compte (Premium 👑)" : "Ajouter un compte"}
+            <button onClick={() => setIsAddingAccount(true)} className="w-full py-3.5 border-2 border-dashed border-slate-100 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl transition-all text-slate-300 hover:border-indigo-200 hover:text-indigo-400"> 
+              <IconPlus className="w-3 h-3" /> Ajouter un compte
             </button> 
           ) : ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mt-2"> 
-              <input autoFocus value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Nom du compte..." className="w-full bg-slate-50 p-2.5 rounded-xl mb-2 text-xs font-bold outline-none" /> 
+              <input autoFocus value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Nom du compte (ex: Compte Commun)..." className="w-full bg-slate-50 p-2.5 rounded-xl mb-2 text-xs font-bold outline-none" /> 
               <div className="flex gap-2"> 
                 <button onClick={() => setIsAddingAccount(false)} className="flex-1 py-2 text-[9px] font-black uppercase text-slate-400">Annuler</button> 
                 <button onClick={handleCreateAccount} className="flex-1 py-2 text-[9px] font-black uppercase text-white bg-indigo-600 rounded-xl">Créer</button> 

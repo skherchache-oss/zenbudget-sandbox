@@ -6,22 +6,26 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 const STORAGE_KEY = 'zenbudget_state_v3';
 
 /**
+ * Utilitaire pour nettoyer les objets avant l'envoi à Firestore
+ * (Supprime les undefined et convertit en JSON pur)
+ */
+const prepareForFirestore = (obj: any) => JSON.parse(JSON.stringify(obj));
+
+/**
  * Génère un ID unique pour les transactions ou les comptes
  */
 export const generateId = () => Math.random().toString(36).substring(2, 11);
 
 /**
- * Crée une nouvelle transaction vierge (CORRECTION DATE)
- * Si une date est fournie (ex: clic sur le calendrier), on l'utilise.
- * Sinon, on utilise la date du jour.
+ * Crée une nouvelle transaction vierge
  */
 export const createNewTransaction = (date?: Date): Transaction => ({
   id: generateId(),
   type: 'EXPENSE',
   amount: 0,
-  categoryId: 'cat_others', // Catégorie "Autres" par défaut
-  date: (date || new Date()).toISOString(), // Utilise la date cliquée ou aujourd'hui
-  note: '',
+  categoryId: 'cat_others',
+  date: (date || new Date()).toISOString(),
+  comment: '', // Changé 'note' en 'comment' pour correspondre à ton App.tsx
   isConfirmed: true
 });
 
@@ -56,10 +60,8 @@ export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAcco
 
 /**
  * LOGIQUE DE MIGRATION & FUSION
- * Nettoie les données pour éviter les crashs et élimine les doublons
  */
 const migrateData = (parsed: any, defaultState: AppState): AppState => {
-  // 1. Fusion des catégories (sans doublons)
   const savedCategories: Category[] = parsed.categories || [];
   const mergedCategories = [...DEFAULT_CATEGORIES];
   savedCategories.forEach(sc => {
@@ -68,21 +70,18 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     }
   });
 
-  // 2. Nettoyage et fusion des comptes
   const rawAccounts = Array.isArray(parsed.accounts) ? parsed.accounts : defaultState.accounts;
   const accounts = rawAccounts.map((acc: any) => {
-    // --- PROTECTION ANTI-DOUBLONS TRANSACTIONS ---
     const rawTransactions: Transaction[] = acc.transactions || [];
-    // On utilise une Map pour garantir que chaque ID de transaction est unique
     const uniqueTxMap = new Map();
     rawTransactions.forEach(tx => {
       if (tx.id) uniqueTxMap.set(tx.id, tx);
     });
-    const cleanedTransactions = Array.from(uniqueTxMap.values());
-
+    
     return {
       ...acc,
-      transactions: cleanedTransactions,
+      id: acc.id || generateId(),
+      transactions: Array.from(uniqueTxMap.values()),
       recurringTemplates: acc.recurringTemplates || [],
       deletedVirtualIds: acc.deletedVirtualIds || [],
       recurringSyncLog: acc.recurringSyncLog || [],
@@ -92,7 +91,6 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     };
   });
 
-  // 3. Reconstruction de l'état final
   return { 
     ...defaultState, 
     ...parsed, 
@@ -127,8 +125,7 @@ export const getInitialState = (): AppState => {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (!saved) return defaultState;
-    const parsed = JSON.parse(saved);
-    return migrateData(parsed, defaultState);
+    return migrateData(JSON.parse(saved), defaultState);
   } catch (e) {
     console.error("Erreur de restauration locale:", e);
     return defaultState;
@@ -152,7 +149,7 @@ export const saveState = (state: AppState) => {
  * --- FONCTIONS CLOUD FIRESTORE ---
  */
 
-export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null, photoURL?: string | null }): Promise<AppState> => {
+export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null, photoURL?: string | null }): Promise<AppState | null> => {
   const userDocRef = doc(db, 'users', firebaseUser.uid);
   
   const currentUser: User = { 
@@ -162,39 +159,47 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
     photoURL: firebaseUser.photoURL || undefined
   };
   
-  const defaultAcc = createDefaultAccount(firebaseUser.uid);
-  const defaultState: AppState = {
-    user: currentUser,
-    accounts: [defaultAcc],
-    activeAccountId: defaultAcc.id,
-    categories: DEFAULT_CATEGORIES,
-    tasks: [],
-    activeView: 'DASHBOARD'
-  };
-
   try {
     const docSnap = await getDoc(userDocRef);
+    
     if (docSnap.exists()) {
-      return migrateData(docSnap.data(), defaultState);
+      // Priorité aux données du Cloud
+      return migrateData(docSnap.data(), { 
+        user: currentUser, 
+        accounts: [], 
+        activeAccountId: '', 
+        categories: DEFAULT_CATEGORIES, 
+        tasks: [], 
+        activeView: 'DASHBOARD' 
+      });
     } else {
+      // Si rien sur le Cloud, on prépare la migration du local vers le cloud
       const localState = getInitialState();
+      
+      // Si l'utilisateur local a déjà des données, on les migre
+      const hasLocalData = localState.accounts.some(acc => acc.transactions.length > 0 || acc.recurringTemplates.length > 0);
+      
       const migratedAccounts = localState.accounts.map(acc => ({
         ...acc,
         ownerId: firebaseUser.uid
       }));
 
-      const stateToUpload: AppState = { 
+      const stateToUpload = prepareForFirestore({ 
         ...localState, 
         user: currentUser, 
         accounts: migratedAccounts 
-      };
+      });
 
-      await setDoc(userDocRef, stateToUpload);
+      // On n'enregistre sur le cloud que si l'utilisateur a vraiment des données
+      if (hasLocalData) {
+        await setDoc(userDocRef, stateToUpload);
+      }
+      
       return stateToUpload;
     }
   } catch (error) {
     console.error("Erreur récupération Cloud:", error);
-    return defaultState;
+    return null;
   }
 };
 
@@ -202,8 +207,9 @@ export const saveUserData = async (userId: string, state: AppState) => {
   if (!userId || userId === 'local-user') return;
   try {
     const userDocRef = doc(db, 'users', userId);
+    // On retire activeView car c'est une info de session, pas de data
     const { activeView, ...cloudData } = state;
-    await setDoc(userDocRef, cloudData);
+    await setDoc(userDocRef, prepareForFirestore(cloudData));
   } catch (error) {
     console.error("Erreur sauvegarde Cloud:", error);
   }
