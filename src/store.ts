@@ -11,6 +11,21 @@ const STORAGE_KEY = 'zenbudget_state_v3';
 export const generateId = () => Math.random().toString(36).substring(2, 11);
 
 /**
+ * Crée une nouvelle transaction vierge (CORRECTION DATE)
+ * Si une date est fournie (ex: clic sur le calendrier), on l'utilise.
+ * Sinon, on utilise la date du jour.
+ */
+export const createNewTransaction = (date?: Date): Transaction => ({
+  id: generateId(),
+  type: 'EXPENSE',
+  amount: 0,
+  categoryId: 'cat_others', // Catégorie "Autres" par défaut
+  date: (date || new Date()).toISOString(), // Utilise la date cliquée ou aujourd'hui
+  note: '',
+  isConfirmed: true
+});
+
+/**
  * Vérifie si le LocalStorage est disponible
  */
 const isStorageAvailable = () => {

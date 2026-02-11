@@ -57,7 +57,7 @@ const App: React.FC = () => {
     setSelectedDay(null);
   };
 
-  // --- LOGIQUE BOUTON RETOUR ANDROID ---
+  // --- LOGIQUE BOUTON RETOUR ANDROID / MOBILE BROWSER ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       if (showAddModal) {
@@ -76,9 +76,20 @@ const App: React.FC = () => {
     };
   }, [showAddModal]);
 
+  // CORRECTION MINEURE : Sécurité pour l'ajout vs édition
   const openAddModal = (date?: string, editItem?: Transaction | null) => {
-    if (editItem) setEditingTransaction(editItem);
-    if (date) setModalInitialDate(date);
+    if (editItem) {
+      setEditingTransaction(editItem);
+    } else {
+      setEditingTransaction(null); // On s'assure de ne pas éditer si c'est un nouvel ajout
+    }
+    
+    if (date) {
+      setModalInitialDate(date);
+    } else if (!editItem) {
+      setModalInitialDate(new Date().toISOString());
+    }
+    
     setShowAddModal(true);
   };
 
@@ -138,7 +149,6 @@ const App: React.FC = () => {
     return state.accounts.find(a => a.id === state.activeAccountId) || state.accounts[0];
   }, [state.accounts, state.activeAccountId]);
 
-  // CORRECTION : On passe à 00:00:00 pour déclencher les calculs dès le début du jour J
   const now = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -160,11 +170,10 @@ const App: React.FC = () => {
   const getBalanceAtDate = (targetDate: Date, includeProjections: boolean) => {
     if (!activeAccount) return 0;
     const normalizedTarget = new Date(targetDate);
-    normalizedTarget.setHours(23, 59, 59, 999); // On prend toute la journée cible
+    normalizedTarget.setHours(23, 59, 59, 999);
     
     let balance = activeAccount.transactions.reduce((acc, t) => {
       const tDate = new Date(t.date);
-      // CORRECTION : On compare au début de journée pour inclure les transactions du jour même
       tDate.setHours(0, 0, 0, 0); 
       return tDate <= normalizedTarget ? acc + (t.type === 'INCOME' ? t.amount : -t.amount) : acc;
     }, 0);
@@ -177,7 +186,7 @@ const App: React.FC = () => {
         const marker = `${tpl.comment?.toLowerCase().trim() || ''}-${tpl.amount}`;
         if (paidMarkers.has(marker)) return;
         const day = Math.min(tpl.dayOfMonth, new Date(currentYear, currentMonth + 1, 0).getDate());
-        const vDate = new Date(currentYear, currentMonth, day, 0, 0, 0); // CORRECTION : 00h00
+        const vDate = new Date(currentYear, currentMonth, day, 0, 0, 0);
         const vId = `virtual-${tpl.id}-${currentMonth}-${currentYear}`;
         if (vDate <= normalizedTarget && !deletedIds.has(vId)) {
           balance += (tpl.type === 'INCOME' ? tpl.amount : -tpl.amount);
@@ -208,7 +217,7 @@ const App: React.FC = () => {
         return {
           id: vId, amount: tpl.amount, type: tpl.type, categoryId: tpl.categoryId,
           comment: tpl.comment || (tpl.type === 'INCOME' ? 'Revenu fixe' : 'Charge fixe'),
-          date: new Date(currentYear, currentMonth, day, 0, 0, 0).toISOString(), // CORRECTION : 00h00
+          date: new Date(currentYear, currentMonth, day, 0, 0, 0).toISOString(),
           isRecurring: true, templateId: tpl.id
         } as Transaction;
       }).filter(v => !deletedIds.has(v.id));
@@ -400,28 +409,24 @@ const App: React.FC = () => {
                        Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
                      </p>
                    </div>
-
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">1.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
                       </p>
                    </div>
-
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">2.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
                       </p>
                    </div>
-
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">3.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
                       </p>
                    </div>
-
                    <div className="flex gap-3 px-1 items-start border-t border-slate-50 pt-2">
                       <span className="font-black text-indigo-600">4.</span>
                       <p className="text-[11px] font-medium text-slate-400 italic leading-tight">

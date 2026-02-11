@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, Category } from '../types';
 import { MONTHS_FR } from '../constants';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -119,6 +119,14 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const isThisMonth = new Date().getMonth() === month && new Date().getFullYear() === year;
 
+  // CORRECTION : Fonction pour ajouter une transaction à la date sélectionnée
+  const handleQuickAdd = () => {
+    if (!selectedDay) return;
+    // On crée une date ISO à partir de l'année, du mois et du jour cliqué
+    const clickedDate = new Date(year, month, selectedDay, 12, 0, 0).toISOString();
+    onAddAtDate(clickedDate);
+  };
+
   return (
     <div className="space-y-3 pb-48 h-full overflow-y-auto no-scrollbar">
       <div className="flex items-center justify-between px-1">
@@ -166,7 +174,12 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
                   const isToday = isThisMonth && new Date().getDate() === day;
                   const dayT = transactions.filter(t => new Date(t.date).getDate() === day);
                   return (
-                    <button key={day} onClick={() => onSelectDay(day)} className={`h-16 rounded-[14px] flex flex-col items-center justify-between py-2 transition-all border relative overflow-hidden ${isSelected ? 'bg-slate-900 border-slate-900 text-white z-10 scale-[1.03]' : (isToday ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-white border-slate-50')}`}>
+                    <button 
+                      key={day} 
+                      onClick={() => onSelectDay(day)} 
+                      onDoubleClick={handleQuickAdd} // OPTIONNEL : Double clic pour ajouter direct
+                      className={`h-16 rounded-[14px] flex flex-col items-center justify-between py-2 transition-all border relative overflow-hidden ${isSelected ? 'bg-slate-900 border-slate-900 text-white z-10 scale-[1.03]' : (isToday ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-white border-slate-50')}`}
+                    >
                       <span className={`text-[12px] font-black leading-none ${isSelected ? 'text-white' : 'text-slate-400'}`}>{day}</span>
                       <div className="flex flex-col items-center justify-center w-full px-0.5 flex-1 mt-1">
                         <span className={`text-[12px] font-black tracking-tighter truncate w-full text-center leading-none ${isSelected ? 'text-indigo-300' : (balance >= 0 ? 'text-indigo-600' : 'text-red-500')}`}>
@@ -188,6 +201,16 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {selectedDay ? `${selectedDay} ${MONTHS_FR[month]}` : "Jour sélectionné"}
                 </h3>
+                {/* CORRECTION : Bouton d'ajout qui utilise la date sélectionnée */}
+                {selectedDay && (
+                  <button 
+                    onClick={handleQuickAdd}
+                    className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1 rounded-full active:scale-95 transition-all shadow-sm"
+                  >
+                    <Plus size={12} strokeWidth={3} />
+                    <span className="text-[9px] font-black uppercase">Ajouter</span>
+                  </button>
+                )}
               </div>
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-50 overflow-hidden divide-y divide-slate-50">
                 {selectedDayTransactions.length > 0 ? (
