@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, Category } from '../types';
 import { MONTHS_FR } from '../constants';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -122,7 +122,6 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const isThisMonth = new Date().getMonth() === month && new Date().getFullYear() === year;
 
-  // Fonction pour ajouter une transaction à la date sélectionnée
   const handleQuickAdd = () => {
     if (!selectedDay) return;
     const clickedDate = new Date(year, month, selectedDay, 12, 0, 0).toISOString();
@@ -199,19 +198,10 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
             </div>
 
             <div className="animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between px-2 mb-2">
+              <div className="px-2 mb-2">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {selectedDay ? `${selectedDay} ${MONTHS_FR[month]}` : "Jour sélectionné"}
                 </h3>
-                {selectedDay && (
-                  <button 
-                    onClick={handleQuickAdd}
-                    className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1 rounded-full active:scale-95 transition-all shadow-sm"
-                  >
-                    <Plus size={12} strokeWidth={3} />
-                    <span className="text-[9px] font-black uppercase">Ajouter</span>
-                  </button>
-                )}
               </div>
               <div className="bg-white rounded-[24px] shadow-sm border border-slate-50 overflow-hidden divide-y divide-slate-50">
                 {selectedDayTransactions.length > 0 ? (
