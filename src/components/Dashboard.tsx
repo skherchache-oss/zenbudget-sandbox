@@ -144,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           
           <div className="flex flex-col">
             <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">
-              Ma situation
+              Mon budget
             </h2>
             <div className="relative mt-3" ref={menuRef}>
               <button 
