@@ -46,17 +46,15 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIQUE GENERATIVE AI AVEC URL DE MODÈLE CORRIGÉE ---
+  // --- LOGIQUE GENERATIVE AI (FIXÉ SUR V1 STABLE) ---
   const fetchAiAdvice = async (force: boolean = false) => {
-    // Récupération de la clé API
     const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
     
     if (!API_KEY) {
-      setAiAdvice("Configurez votre clé API dans Vercel. ✨");
+      setAiAdvice("Clé API manquante dans Vercel. ✨");
       return;
     }
 
-    // Gestion du cache par mois/compte
     const cacheKey = `zentip_${activeAccount.id}_${month}_${year}`;
     const cachedAdvice = sessionStorage.getItem(cacheKey);
 
@@ -77,14 +75,14 @@ const Dashboard: React.FC<DashboardProps> = ({
       const context = `Solde: ${availableBalance}€, Dépenses: ${totalExpenses}€, État: ${availableBalance < 0 ? 'Découvert' : 'Sain'}.`;
       const randomSeed = Math.random().toString(36).substring(7);
 
-      // CORRECTION : L'URL utilise maintenant 'models/gemini-1.5-flash'
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+      // CHANGEMENT : Passage en v1 stable et modèle 'gemini-1.5-flash-latest'
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ 
             parts: [{ 
-              text: `Tu es un coach financier zen. Donne un conseil court et inspirant basé sur : ${context}. Seed unique: ${randomSeed}. Max 60 car. Pas de guillemets.` 
+              text: `Tu es un coach financier zen. Donne un conseil très court (max 60 car.) inspirant basé sur : ${context}. Seed unique: ${randomSeed}. Pas de guillemets.` 
             }] 
           }]
         })
@@ -92,7 +90,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       const data = await response.json();
 
-      // Gestion propre de l'erreur NOT_FOUND
       if (data.error) {
         throw new Error(data.error.message);
       }
@@ -100,17 +97,16 @@ const Dashboard: React.FC<DashboardProps> = ({
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (text) {
-        // Suppression rigoureuse des guillemets
+        // Nettoyage des guillemets
         const cleanedText = text.replace(/["']/g, "").trim();
         setAiAdvice(cleanedText);
         sessionStorage.setItem(cacheKey, cleanedText);
       } else {
-        setAiAdvice("Le calme est la clé d'un bon budget. 🧘");
+        setAiAdvice("La paix d'esprit vaut tous les trésors. 🧘");
       }
     } catch (err: any) {
       console.error("Erreur Gemini:", err);
-      // On affiche un message neutre à l'utilisateur
-      setAiAdvice("L'IA est en pause zen. Revenez plus tard. ✨");
+      setAiAdvice("Votre équilibre est votre force. ✨");
     } finally {
       setLoadingAdvice(false);
     }
@@ -255,7 +251,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div 
         className="bg-indigo-50/50 backdrop-blur-sm p-6 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-all active:scale-95" 
         onClick={() => !loadingAdvice && fetchAiAdvice(true)}
-        title="Cliquez pour un nouveau conseil"
       >
         <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0">
           {loadingAdvice ? <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /> : "💡"}
