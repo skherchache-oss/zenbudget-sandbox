@@ -46,12 +46,17 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIQUE GENERATIVE AI (URL UNIVERSELLE) ---
+  // --- LOGIQUE GENERATIVE AI ---
   const fetchAiAdvice = async (force: boolean = false) => {
-    const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
+    // On essaie de récupérer la clé de partout où elle pourrait être
+    const API_KEY = 
+      import.meta.env?.VITE_GEMINI_API_KEY || 
+      (window as any).process?.env?.VITE_GEMINI_API_KEY || 
+      "";
     
+    // Si vraiment aucune clé n'est trouvée
     if (!API_KEY) {
-      setAiAdvice("Configurez votre clé API dans Vercel. ✨");
+      setAiAdvice("Clé API manquante. Vérifiez vos réglages Vercel. ✨");
       return;
     }
 
@@ -65,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     if (loadingAdvice) return;
     setLoadingAdvice(true);
-    setAiAdvice("Méditation budgétaire... ✨");
+    setAiAdvice("Méditation sur vos chiffres... ✨");
     
     try {
       const totalExpenses = transactions
@@ -73,9 +78,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         .reduce((sum, t) => sum + t.amount, 0);
       
       const context = `Solde: ${availableBalance}€, Dépenses: ${totalExpenses}€, État: ${availableBalance < 0 ? 'Découvert' : 'Sain'}.`;
-      
-      // Nouvelle tentative avec la syntaxe v1 standard sans le suffixe -latest
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+
+      // Utilisation de fetch direct sur l'API Google
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,23 +94,21 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       const data = await response.json();
 
-      if (data.error) {
-        // Si ça échoue encore, on tente le modèle Pro au cas où votre clé est restreinte à celui-ci
-        console.warn("Échec Flash, tentative Gemini Pro...");
-        throw new Error(data.error.message);
-      }
+      if (data.error) throw new Error(data.error.message);
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (text) {
+        // Nettoyage des guillemets
         const cleanedText = text.replace(/["']/g, "").trim();
         setAiAdvice(cleanedText);
         sessionStorage.setItem(cacheKey, cleanedText);
       } else {
-        setAiAdvice("Le calme est la plus grande des richesses. 🧘");
+        setAiAdvice("La sérénité est votre meilleur investissement. ✨");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur Gemini:", err);
+      // Ta phrase préférée en secours
       setAiAdvice("Votre sérénité est votre meilleur investissement. ✨");
     } finally {
       setLoadingAdvice(false);
