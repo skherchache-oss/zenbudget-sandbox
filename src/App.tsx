@@ -76,6 +76,9 @@ const App: React.FC = () => {
     };
   }, [showAddModal]);
 
+  /**
+   * MODIFICATION ICI : On utilise selectedDay si présent pour le bouton "+"
+   */
   const openAddModal = (date?: string, editItem?: Transaction | null) => {
     if (editItem) {
       setEditingTransaction(editItem);
@@ -86,7 +89,13 @@ const App: React.FC = () => {
     if (date) {
       setModalInitialDate(date);
     } else if (!editItem) {
-      setModalInitialDate(new Date().toISOString());
+      // Si on clique sur le "+" et qu'un jour est sélectionné sur le calendrier
+      if (selectedDay) {
+        const d = new Date(currentYear, currentMonth, selectedDay, 12, 0, 0);
+        setModalInitialDate(d.toISOString());
+      } else {
+        setModalInitialDate(new Date().toISOString());
+      }
     }
     
     setShowAddModal(true);

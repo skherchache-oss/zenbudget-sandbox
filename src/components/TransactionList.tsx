@@ -112,17 +112,19 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
 
   const selectedDayTransactions = useMemo(() => {
     if (selectedDay === null) return [];
-    return transactions.filter(t => new Date(t.date).getDate() === selectedDay);
-  }, [transactions, selectedDay]);
+    return transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getDate() === selectedDay && d.getMonth() === month && d.getFullYear() === year;
+    });
+  }, [transactions, selectedDay, month, year]);
 
   const startOffset = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const isThisMonth = new Date().getMonth() === month && new Date().getFullYear() === year;
 
-  // CORRECTION : Fonction pour ajouter une transaction à la date sélectionnée
+  // Fonction pour ajouter une transaction à la date sélectionnée
   const handleQuickAdd = () => {
     if (!selectedDay) return;
-    // On crée une date ISO à partir de l'année, du mois et du jour cliqué
     const clickedDate = new Date(year, month, selectedDay, 12, 0, 0).toISOString();
     onAddAtDate(clickedDate);
   };
@@ -177,7 +179,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
                     <button 
                       key={day} 
                       onClick={() => onSelectDay(day)} 
-                      onDoubleClick={handleQuickAdd} // OPTIONNEL : Double clic pour ajouter direct
+                      onDoubleClick={handleQuickAdd}
                       className={`h-16 rounded-[14px] flex flex-col items-center justify-between py-2 transition-all border relative overflow-hidden ${isSelected ? 'bg-slate-900 border-slate-900 text-white z-10 scale-[1.03]' : (isToday ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-white border-slate-50')}`}
                     >
                       <span className={`text-[12px] font-black leading-none ${isSelected ? 'text-white' : 'text-slate-400'}`}>{day}</span>
@@ -201,7 +203,6 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, categor
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {selectedDay ? `${selectedDay} ${MONTHS_FR[month]}` : "Jour sélectionné"}
                 </h3>
-                {/* CORRECTION : Bouton d'ajout qui utilise la date sélectionnée */}
                 {selectedDay && (
                   <button 
                     onClick={handleQuickAdd}

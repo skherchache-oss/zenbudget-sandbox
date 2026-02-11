@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Category, TransactionType, Transaction } from '../types';
 
@@ -18,6 +17,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ categories, o
   const [date, setDate] = useState(initialDate.split('T')[0]);
   const [isRecurring, setIsRecurring] = useState(editItem?.isRecurring || false);
 
+  // Synchronisation lors de l'édition ou du changement de date sélectionnée
   useEffect(() => {
     if (editItem) {
       setType(editItem.type);
@@ -26,8 +26,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ categories, o
       setComment(editItem.comment || '');
       setDate(editItem.date.split('T')[0]);
       setIsRecurring(editItem.isRecurring);
+    } else {
+      // Si on n'est pas en édition, on met à jour la date si initialDate change
+      setDate(initialDate.split('T')[0]);
     }
-  }, [editItem]);
+  }, [editItem, initialDate]);
 
   const filteredCategories = useMemo(() => 
     categories.filter(c => c.type === type),
@@ -36,11 +39,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ categories, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Correction cruciale : toujours prendre la valeur absolue du montant
+    // Toujours prendre la valeur absolue du montant
     const parsedAmount = Math.abs(parseFloat(amount.replace(',', '.')));
     if (isNaN(parsedAmount) || parsedAmount <= 0 || !categoryId) return;
     
-    // On cale l'heure à midi pour éviter les décalages de fuseau horaire (GMT+1/2)
+    // On cale l'heure à midi pour éviter les décalages de fuseau horaire
     const [year, month, day] = date.split('-').map(Number);
     const secureDate = new Date(year, month - 1, day, 12, 0, 0).toISOString();
 
@@ -66,16 +69,19 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ categories, o
       <div className="absolute inset-0" onClick={onClose} />
       <div className="bg-white w-full max-w-md rounded-t-[40px] shadow-2xl p-6 pb-8 relative z-10 animate-in slide-in-from-bottom duration-300">
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Sélecteur de type */}
           <div className="flex p-1 bg-slate-100 rounded-2xl">
             <button type="button" onClick={() => setType('EXPENSE')} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'EXPENSE' ? 'bg-red-500 text-white shadow-lg' : 'text-slate-400'}`}>Dépense</button>
             <button type="button" onClick={() => setType('INCOME')} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'INCOME' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400'}`}>Revenu</button>
           </div>
 
+          {/* Montant */}
           <div className="text-center bg-slate-50 py-4 rounded-[28px] border border-slate-100 shadow-inner">
             <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1 block">Montant (€)</label>
             <input type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="w-full text-center text-4xl font-black focus:outline-none placeholder-slate-200 text-slate-900 bg-transparent" autoFocus />
           </div>
 
+          {/* Catégories */}
           <div className="max-h-[120px] overflow-y-auto no-scrollbar py-1">
             <div className="grid grid-cols-4 gap-2">
               {filteredCategories.map(cat => (
@@ -87,11 +93,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ categories, o
             </div>
           </div>
 
+          {/* Note */}
           <div className="bg-slate-50 rounded-[24px] border border-slate-100 p-3">
              <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Note</label>
              <input type="text" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Détails..." className="w-full bg-transparent border-none p-0 text-[13px] font-bold text-slate-800 focus:ring-0" />
           </div>
 
+          {/* Date et Fréquence */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white border-2 border-slate-200 rounded-[22px] p-2">
               <span className="text-[7px] font-black uppercase text-slate-400 block mb-1">Date</span>
