@@ -28,7 +28,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSwitchAccount, checkingAccountBalance, availableBalance, projectedBalance, carryOver,
   month, year, onPrevMonth, onNextMonth
 }) => {
-  const [aiAdvice, setAiAdvice] = useState<string>("Analyse de vos énergies financières...");
+  // Utilisation de ta phrase préférée en état initial
+  const [aiAdvice, setAiAdvice] = useState<string>("Votre sérénité est votre meilleur investissement. ✨");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false); 
@@ -48,16 +49,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // --- LOGIQUE GENERATIVE AI ---
   const fetchAiAdvice = async (force: boolean = false) => {
-    // On essaie de récupérer la clé de partout où elle pourrait être
     const API_KEY = 
       import.meta.env?.VITE_GEMINI_API_KEY || 
       (window as any).process?.env?.VITE_GEMINI_API_KEY || 
       "";
     
-    // Si vraiment aucune clé n'est trouvée
     if (!API_KEY) {
-      setAiAdvice("Clé API manquante. Vérifiez vos réglages Vercel. ✨");
-      return;
+      console.warn("VITE_GEMINI_API_KEY est manquante.");
+      return; // On garde la phrase de sérénité par défaut
     }
 
     const cacheKey = `zentip_${activeAccount.id}_${month}_${year}`;
@@ -70,7 +69,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     if (loadingAdvice) return;
     setLoadingAdvice(true);
-    setAiAdvice("Méditation sur vos chiffres... ✨");
     
     try {
       const totalExpenses = transactions
@@ -79,7 +77,6 @@ const Dashboard: React.FC<DashboardProps> = ({
       
       const context = `Solde: ${availableBalance}€, Dépenses: ${totalExpenses}€, État: ${availableBalance < 0 ? 'Découvert' : 'Sain'}.`;
 
-      // Utilisation de fetch direct sur l'API Google
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,22 +90,17 @@ const Dashboard: React.FC<DashboardProps> = ({
       });
 
       const data = await response.json();
-
       if (data.error) throw new Error(data.error.message);
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (text) {
-        // Nettoyage des guillemets
         const cleanedText = text.replace(/["']/g, "").trim();
         setAiAdvice(cleanedText);
         sessionStorage.setItem(cacheKey, cleanedText);
-      } else {
-        setAiAdvice("La sérénité est votre meilleur investissement. ✨");
       }
     } catch (err) {
       console.error("Erreur Gemini:", err);
-      // Ta phrase préférée en secours
       setAiAdvice("Votre sérénité est votre meilleur investissement. ✨");
     } finally {
       setLoadingAdvice(false);
