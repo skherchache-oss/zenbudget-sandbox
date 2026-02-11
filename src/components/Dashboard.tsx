@@ -31,7 +31,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [aiAdvice, setAiAdvice] = useState<string>("Analyse financière Zen...");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [showPremiumModal, setShowPremiumModal] = useState(false); // État pour l'export CSV
+  const [showPremiumModal, setShowPremiumModal] = useState(false); 
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentDate = new Date(year, month);
@@ -119,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {showPremiumModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in zoom-in duration-200">
           <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-4">📊</div>
+            <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
             <h3 className="text-xl font-black text-slate-900 mb-2">Export CSV</h3>
             <p className="text-sm text-slate-500 font-medium mb-6">L'exportation de vos rapports vers Excel sera disponible prochainement dans ZenBudget Premium.</p>
             <button onClick={() => setShowPremiumModal(false)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">D'accord ✨</button>
@@ -127,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      {/* HEADER */}
+      {/* HEADER AVEC NOUVEAU LOGO */}
       <div className="pt-4 flex justify-between items-start">
         <div className="flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -141,7 +141,18 @@ const Dashboard: React.FC<DashboardProps> = ({
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">ZenBudget</h2>
+          
+          {/* ZONE LOGO + TITRE NOIR */}
+          <div className="flex items-center gap-2.5 mt-1">
+            <img 
+              src="/ZB-logo-192.png" 
+              alt="Logo ZenBudget" 
+              className="w-9 h-9 rounded-xl shadow-sm border border-slate-100"
+            />
+            <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">
+              ZenBudget
+            </h2>
+          </div>
           
           <div className="relative mt-3" ref={menuRef}>
             <button 
@@ -176,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* BOUTON EXPORT CSV BRIDÉ */}
+        {/* BOUTON EXPORT CSV */}
         <button 
           onClick={() => setShowPremiumModal(true)} 
           className="flex flex-col items-center gap-1 group transition-all opacity-80"
@@ -191,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      {/* RESTE DU DASHBOARD (Inchangé pour ne rien casser) */}
+      {/* DASHBOARD CONTENT */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors" />
