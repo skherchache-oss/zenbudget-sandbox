@@ -46,17 +46,17 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIQUE GENERATIVE AI (URL CORRIGÉE + CACHE + CLEANUP) ---
+  // --- LOGIQUE GENERATIVE AI AVEC URL DE MODÈLE CORRIGÉE ---
   const fetchAiAdvice = async (force: boolean = false) => {
-    // Récupération sécurisée de la clé
-    const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || "";
+    // Récupération de la clé API
+    const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (window as any).process?.env?.VITE_GEMINI_API_KEY || "";
     
     if (!API_KEY) {
-      setAiAdvice("Clé API manquante dans Vercel. ✨");
+      setAiAdvice("Configurez votre clé API dans Vercel. ✨");
       return;
     }
 
-    // Gestion du Cache
+    // Gestion du cache par mois/compte
     const cacheKey = `zentip_${activeAccount.id}_${month}_${year}`;
     const cachedAdvice = sessionStorage.getItem(cacheKey);
 
@@ -67,7 +67,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     if (loadingAdvice) return;
     setLoadingAdvice(true);
-    setAiAdvice("Le coach médite... ✨");
+    setAiAdvice("Méditation budgétaire... ✨");
     
     try {
       const totalExpenses = transactions
@@ -77,14 +77,14 @@ const Dashboard: React.FC<DashboardProps> = ({
       const context = `Solde: ${availableBalance}€, Dépenses: ${totalExpenses}€, État: ${availableBalance < 0 ? 'Découvert' : 'Sain'}.`;
       const randomSeed = Math.random().toString(36).substring(7);
 
-      // URL v1beta pour maximiser la compatibilité
+      // CORRECTION : L'URL utilise maintenant 'models/gemini-1.5-flash'
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ 
             parts: [{ 
-              text: `Tu es un coach financier zen. Donne un conseil très court (max 60 car.) inspirant basé sur : ${context}. Seed: ${randomSeed}. Pas de guillemets.` 
+              text: `Tu es un coach financier zen. Donne un conseil court et inspirant basé sur : ${context}. Seed unique: ${randomSeed}. Max 60 car. Pas de guillemets.` 
             }] 
           }]
         })
@@ -92,23 +92,25 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       const data = await response.json();
 
+      // Gestion propre de l'erreur NOT_FOUND
       if (data.error) {
-        throw new Error(`${data.error.status}`);
+        throw new Error(data.error.message);
       }
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (text) {
-        // Regex pour supprimer les guillemets résiduels
+        // Suppression rigoureuse des guillemets
         const cleanedText = text.replace(/["']/g, "").trim();
         setAiAdvice(cleanedText);
         sessionStorage.setItem(cacheKey, cleanedText);
       } else {
-        setAiAdvice("Votre sérénité financière est la priorité. 🧘");
+        setAiAdvice("Le calme est la clé d'un bon budget. 🧘");
       }
     } catch (err: any) {
       console.error("Erreur Gemini:", err);
-      setAiAdvice("Le silence est d'or. Réessayez plus tard. ✨");
+      // On affiche un message neutre à l'utilisateur
+      setAiAdvice("L'IA est en pause zen. Revenez plus tard. ✨");
     } finally {
       setLoadingAdvice(false);
     }
@@ -252,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* ZEN TIP BOX */}
       <div 
         className="bg-indigo-50/50 backdrop-blur-sm p-6 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-all active:scale-95" 
-        onClick={() => !loadingAdvice && fetchAiAdvice(true)} 
+        onClick={() => !loadingAdvice && fetchAiAdvice(true)}
         title="Cliquez pour un nouveau conseil"
       >
         <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-2xl shrink-0">
