@@ -3,8 +3,6 @@ import { AppState, BudgetAccount, Category } from '../types';
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount } from '../store'; 
 import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
-import { db } from '../firebase'; 
-import { collection, query, where, getDocs, updateDoc, doc, arrayUnion } from 'firebase/firestore';
 
 interface SettingsProps { 
   state: AppState; 
@@ -96,15 +94,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [tempUserName, setTempUserName] = useState(user?.displayName || '');
   const [premiumModal, setPremiumModal] = useState<{open: boolean, title: string}>({open: false, title: ""});
   
-  const [isInviting, setIsInviting] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteStatus, setInviteStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const activeAccount = state.accounts.find(a => a.id === state.activeAccountId); 
-  const isRealUser = user && user.uid !== 'local-user';
   const currentCycleDay = activeAccount?.cycleEndDay || 0;
   const presets = [25, 26, 27, 28, 0];
   const isCustomDay = !presets.includes(currentCycleDay);
@@ -113,58 +106,12 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-3">{title}</h2> 
   ); 
 
-  const handleInvitePartner = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const emailToInvite = inviteEmail.trim().toLowerCase();
-    if (!emailToInvite || !activeAccount || !user) return;
-    
-    setInviteStatus('loading');
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where("user.email", "==", emailToInvite));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        const confirmInvite = confirm("Cet utilisateur n'a pas encore de compte. Voulez-vous lui envoyer un mail d'invitation ?");
-        if (confirmInvite) {
-          const subject = encodeURIComponent("Rejoins-moi sur ZenBudget ! ✨");
-          const body = encodeURIComponent(`Hello ! Je souhaite partager mes finances avec toi sur ZenBudget.\n\nCrée ton compte ici : ${window.location.origin}`);
-          window.location.href = `mailto:${emailToInvite}?subject=${subject}&body=${body}`;
-        }
-        setInviteStatus('idle');
-        return;
-      }
-
-      const partnerData = querySnapshot.docs[0].data();
-      const partnerId = partnerData.user.id;
-
-      if (partnerId === user.uid) {
-        alert("C'est votre propre email ! 😉");
-        setInviteStatus('idle');
-        return;
-      }
-
-      const nextAccounts = state.accounts.map(acc => {
-        if (acc.id === activeAccount.id) {
-          const alreadyShared = acc.sharedWith || [];
-          if (alreadyShared.includes(partnerId)) return acc;
-          return { ...acc, sharedWith: [...alreadyShared, partnerId] };
-        }
-        return acc;
-      });
-
-      onUpdateAccounts(nextAccounts);
-      setInviteStatus('success');
-      setInviteEmail('');
-      setTimeout(() => { setIsInviting(false); setInviteStatus('idle'); }, 2000);
-      alert(`✨ ${partnerData.user.name} a été ajouté !`);
-    } catch (err) {
-      console.error(err);
-      setInviteStatus('error');
-    }
-  };
-
   const handleCreateAccount = () => { 
+    if (state.accounts.length >= 1) {
+        setPremiumModal({ open: true, title: "Multi-comptes" });
+        setIsAddingAccount(false);
+        return;
+    }
     if (!newAccName.trim()) return; 
     const newAcc = createDefaultAccount(user?.uid || 'local-user'); 
     newAcc.name = newAccName.trim(); 
@@ -184,21 +131,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     setEditingAccountId(null); 
   }; 
 
-  const updateCycleDay = (day: number) => { 
-    if (!activeAccount) return; 
-    const nextAccounts = state.accounts.map(a => a.id === activeAccount.id ? { ...a, cycleEndDay: day } : a); 
-    onUpdateAccounts(nextAccounts); 
-  };
-
-  const handleManualDayUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    const day = parseInt(manualDay);
-    if (!isNaN(day) && day >= 1 && day <= 31) {
-      updateCycleDay(day === 31 ? 0 : day);
-      setManualDay('');
-    }
-  };
-
   const handleSaveUserName = async () => {
     if (!user || !tempUserName.trim()) {
       setIsEditingUserName(false);
@@ -209,11 +141,112 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       onUpdateUser({ name: tempUserName.trim() });
       setIsEditingUserName(false);
     } catch (err) {
-      console.error(err);
+      console.error("Erreur mise à jour nom:", err);
       setIsEditingUserName(false);
     }
   };
 
+  const handleDeleteUserAccount = async () => {
+    if (!user) return;
+    const confirmDelete = prompt("Pour supprimer définitivement votre compte ZenBudget et TOUTES vos données Cloud, tapez sans espaces 'SUPPRIMER'");
+    if (confirmDelete === 'SUPPRIMER') {
+      try {
+        await deleteUser(user);
+        alert("Votre compte a été supprimé. A bientôt ! ✨");
+        onLogout();
+      } catch (err: any) {
+        if (err.code === 'auth/requires-recent-login') {
+          alert("Action sensible : Veuillez vous reconnecter, puis réessayer immédiatement la suppression.");
+          onLogout();
+        } else {
+          alert("Une erreur est survenue lors de la suppression.");
+        }
+      }
+    }
+  };
+
+  const updateCycleDay = (day: number) => { 
+    if (!activeAccount) return; 
+    const nextAccounts = state.accounts.map(a => a.id === activeAccount.id ? { ...a, cycleEndDay: day } : a); 
+    onUpdateAccounts(nextAccounts); 
+  }; 
+
+  const handleManualDayUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const day = parseInt(manualDay);
+    if (!isNaN(day) && day >= 1 && day <= 31) {
+      updateCycleDay(day === 31 ? 0 : day);
+      setManualDay('');
+    }
+  };
+
+  const compressImage = (file: File, size: number, quality: number): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            const ratio = Math.max(size / img.width, size / img.height);
+            const x = (size - img.width * ratio) / 2;
+            const y = (size - img.height * ratio) / 2;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, size, size);
+            ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
+          }
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+      };
+    });
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && user) {
+      setIsUploading(true);
+      try {
+        const hdUrl = await compressImage(file, 512, 0.9);
+        localStorage.setItem(`user_photo_hd_${user.uid}`, hdUrl);
+        const tinyUrl = await compressImage(file, 40, 0.4);
+        onUpdateUser({ photoURL: hdUrl });
+        try {
+          await updateProfile(user, { photoURL: tinyUrl });
+        } catch (e) {
+          console.warn("Firebase sync error, local HD preserved.");
+        }
+      } catch (err) {
+        console.error("Erreur photo:", err);
+      } finally {
+        setIsUploading(false);
+        if (photoInputRef.current) photoInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemovePhoto = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user || isUploading) return;
+    if (confirm("Supprimer la photo de profil ?")) {
+      setIsUploading(true);
+      try {
+        localStorage.removeItem(`user_photo_hd_${user.uid}`);
+        await updateProfile(user, { photoURL: null });
+        onUpdateUser({ photoURL: null });
+      } catch (err) {
+        console.error("Erreur suppression photo:", err);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const isRealUser = user && user.uid !== 'local-user';
   const currentPhoto = (user && localStorage.getItem(`user_photo_hd_${user.uid}`)) || state.user.photoURL;
 
   return ( 
@@ -224,22 +257,55 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           <div className="relative group">
-            <div className="w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl">
+            <div 
+              onClick={() => photoInputRef.current?.click()}
+              className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl transition-all group-hover:ring-4 group-hover:ring-indigo-50 cursor-pointer ${isUploading ? 'opacity-50' : ''}`}
+            >
               {currentPhoto ? <img src={currentPhoto} alt="Profil" className="w-full h-full object-cover" /> : <span className="text-2xl font-black text-indigo-600 uppercase">{user?.displayName?.charAt(0) || 'Z'}</span>}
+              <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+              </div>
+              {isUploading && <div className="absolute inset-0 flex items-center justify-center bg-black/20"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
             </div>
-          </div>
-          <div className="flex flex-col items-center justify-center w-full">
-            {isEditingUserName ? (
-              <input autoFocus value={tempUserName} onChange={e => setTempUserName(e.target.value)} onBlur={handleSaveUserName} className="bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none" />
-            ) : (
-              <h3 onClick={() => isRealUser && setIsEditingUserName(true)} className="font-black text-slate-800 text-lg cursor-pointer hover:text-indigo-600 transition-colors">{user?.displayName || 'Utilisateur Zen'}</h3>
+            {currentPhoto && !isUploading && (
+              <button onClick={handleRemovePhoto} className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all z-10"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             )}
-            <p className="text-[11px] font-bold text-slate-400">{user?.email || 'Mode Hors-ligne'}</p>
+            <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
-          <button onClick={() => isRealUser ? onLogout() : onLogin()} className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 border hover:text-red-500'}`}>
-            {isRealUser ? 'Se déconnecter' : 'Se connecter'}
+
+          <div className="flex flex-col items-center justify-center w-full min-w-0 text-center">
+            {isEditingUserName ? (
+              <div className="w-full flex justify-center">
+                <input autoFocus value={tempUserName} onChange={e => setTempUserName(e.target.value)} onBlur={handleSaveUserName} onKeyDown={e => e.key === 'Enter' && handleSaveUserName()} className="w-full max-w-[200px] bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none" />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 mb-1 w-full cursor-pointer group" onClick={() => isRealUser && setIsEditingUserName(true)}>
+                <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">{user?.displayName || 'Utilisateur Invité'}</h3>
+                {isRealUser && <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>}
+                <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+              </div>
+            )}
+            <p className="text-[11px] font-bold text-slate-400 truncate w-full max-w-[250px] mx-auto">{user?.email || 'Mode Hors-ligne'}</p>
+          </div>
+
+          <button onClick={() => isRealUser ? onLogout() : onLogin()} className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}>
+            {isRealUser ? 'Se déconnecter de ZenBudget' : 'Se connecter / S\'inscrire'}
           </button>
         </div>
+      </section>
+
+      {/* AIDE */}
+      <section> 
+        <SectionTitle title="Aide" /> 
+        <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
+          <button onClick={onShowWelcome} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group"> 
+            <div className="flex items-center gap-3"> 
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-sm group-active:scale-90 transition-transform">📖</div> 
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Guide Zen de l'application</span> 
+            </div> 
+            <svg className="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button> 
+        </div> 
       </section>
 
       {/* MES COMPTES & PARTAGE */}
@@ -250,33 +316,27 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             <div key={acc.id} className="group">
               <AccountItem acc={acc} isActive={state.activeAccountId === acc.id} onDelete={onDeleteAccount} onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} onSelect={onSetActiveAccount} canDelete={state.accounts.length > 1} /> 
               {state.activeAccountId === acc.id && (
-                <div className="flex flex-col">
-                  <div className="bg-white border-x border-slate-50 px-4 py-2 flex flex-wrap gap-2">
-                    <span className="text-[7px] font-black text-slate-300 uppercase w-full">Accès :</span>
-                    <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] font-bold text-indigo-600">Moi</div>
-                    {acc.sharedWith?.map(uid => <div key={uid} className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[8px] font-bold text-emerald-600">👤</div>)}
-                  </div>
-                  {!isInviting ? (
-                    <button onClick={() => isRealUser ? setIsInviting(true) : alert("Connectez-vous pour partager !")} className="w-full mt-[-2px] mb-4 py-2.5 bg-white rounded-b-2xl border-x border-b border-slate-100 flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-indigo-500">Inviter un partenaire</span>
-                      <span className="text-[9px]">🤝</span>
-                    </button>
-                  ) : (
-                    <form onSubmit={handleInvitePartner} className="mt-[-2px] mb-4 p-4 bg-indigo-50 rounded-b-2xl border-x border-b border-indigo-100 space-y-2">
-                      <input type="email" required placeholder="Email du partenaire..." value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="w-full bg-white border border-indigo-200 p-2.5 rounded-xl text-xs font-bold outline-none" />
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setIsInviting(false)} className="flex-1 py-2 text-[8px] font-black uppercase text-slate-400">Annuler</button>
-                        <button type="submit" className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-[8px] font-black uppercase">{inviteStatus === 'loading' ? '...' : 'Ajouter'}</button>
-                      </div>
-                    </form>
-                  )}
-                </div>
+                <button onClick={() => setPremiumModal({ open: true, title: "Partage de compte" })} className="w-full mt-[-2px] mb-4 py-2.5 bg-white rounded-b-2xl border-x border-b border-slate-100 flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors shadow-sm">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Inviter un partenaire sur ce compte</span>
+                  <span className="text-[9px]">👑</span>
+                </button>
               )}
             </div>
           ))} 
+          
+          {editingAccountId && ( 
+            <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mb-2"> 
+              <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-slate-50 p-2.5 rounded-xl mb-2 text-xs font-bold outline-none" /> 
+              <div className="flex gap-2"> 
+                <button onClick={() => setEditingAccountId(null)} className="flex-1 py-2 text-[9px] font-black uppercase text-slate-400">Annuler</button> 
+                <button onClick={handleSaveRename} className="flex-1 py-2 text-[9px] font-black uppercase text-white bg-indigo-600 rounded-xl">Renommer</button> 
+              </div> 
+            </div> 
+          )} 
+
           {!isAddingAccount ? ( 
-            <button onClick={() => setIsAddingAccount(true)} className="w-full py-3.5 border-2 border-dashed border-slate-100 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl text-slate-300 hover:border-indigo-200 hover:text-indigo-400 transition-all"> 
-              <IconPlus className="w-3 h-3" /> Ajouter un compte
+            <button onClick={() => state.accounts.length >= 1 ? setPremiumModal({open: true, title: "Multi-comptes"}) : setIsAddingAccount(true)} className={`w-full py-3.5 border-2 border-dashed border-slate-100 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl transition-all ${state.accounts.length >= 1 ? 'text-amber-500 opacity-60 border-amber-100' : 'text-slate-300 hover:border-indigo-200 hover:text-indigo-400'}`}> 
+              <IconPlus className="w-3 h-3" /> {state.accounts.length >= 1 ? "Ajouter un compte (Premium 👑)" : "Ajouter un compte"}
             </button> 
           ) : ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mt-2"> 
@@ -294,28 +354,66 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
+          <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-1">Définissez le jour de clôture du mois (jour de paie).</p>
           <div className="grid grid-cols-5 gap-1.5">
             {presets.map((day) => (
               <button key={day} onClick={() => updateCycleDay(day)} className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${currentCycleDay === day ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>
                 <span className="text-[11px] font-black">{day === 0 ? '31' : day}</span>
+                <span className="text-[5px] font-black uppercase tracking-tighter">{day === 0 ? 'Fin de mois' : 'Du mois'}</span>
               </button>
             ))}
+            {isCustomDay && (
+              <button disabled className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg">
+                <span className="text-[11px] font-black">{currentCycleDay}</span>
+                <span className="text-[5px] font-black uppercase tracking-tighter">Actif</span>
+              </button>
+            )}
           </div>
           <form onSubmit={handleManualDayUpdate} className="flex gap-2">
-            <input type="number" min="1" max="31" value={manualDay} onChange={e => setManualDay(e.target.value)} placeholder="Autre jour (1-31)" className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none" />
+            <input type="number" min="1" max="31" value={manualDay} onChange={e => setManualDay(e.target.value)} placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" />
             <button type="submit" className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">OK</button>
           </form>
         </div>
       </section>
 
-      {/* DANGER ZONE */}
-      <section className="pt-4 flex flex-col gap-2"> 
-        <button onClick={onReset} className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] hover:bg-slate-50 rounded-xl">Réinitialiser localement</button> 
-        <button onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget`} className="w-full py-3 text-indigo-400 font-black uppercase text-[8px] tracking-[0.2em] hover:bg-indigo-50 rounded-xl italic">Signaler un bug ✨</button>
+      {/* SAUVEGARDE */}
+      <section>
+        <SectionTitle title="Sauvegarde" />
+        <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
+          <button onClick={onBackup} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 border-b border-slate-50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px]">💾</div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Exporter backup</span>
+            </div>
+          </button>
+          <input type="file" ref={fileInputRef} hidden accept=".backup,.json" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
+          <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Importer backup</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      {/* FEEDBACK & DANGER ZONE */}
+      <section className="pt-4 space-y-4"> 
+        <div className="bg-slate-900 rounded-[32px] p-6 text-center relative overflow-hidden"> 
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full" /> 
+          <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed">Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !</p> 
+          <button onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`} className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl">Signaler un bug ou proposer une idée ✨</button> 
+        </div> 
+
+        <div className="flex flex-col gap-2">
+          <button onClick={onReset} className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl">Réinitialiser les données locales</button> 
+          {isRealUser && (
+            <button onClick={handleDeleteUserAccount} className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl">Supprimer mon compte & données cloud</button> 
+          )}
+        </div>
       </section> 
 
       <div className="text-center pb-10"> 
-        <p className="text-[7px] text-slate-200 font-black uppercase tracking-[0.5em]">ZenBudget — 2026</p> 
+        <p className="text-[7px] text-slate-200 font-black uppercase tracking-[0.5em]">ZenBudget — 2026 Edition</p> 
       </div> 
     </div> 
   ); 
