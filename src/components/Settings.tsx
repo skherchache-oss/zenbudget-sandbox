@@ -21,8 +21,13 @@ interface SettingsProps {
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
-// --- CONSTANTES POUR LA CRÉATION ---
-const EMOJI_LIST = ['💰', '🛒', '🚗', '🏠', '🍕', '🎮', '🏥', '🔌', '🎁', '✈️', '👕', '🎓', '🛡️', '🍿', '🏋️', '📱', '🐕', '🌿', '🛠️', '💼'];
+// --- LISTE D'ICÔNES ENRICHIE (Bébé, Enfants, Loisirs...) ---
+const EMOJI_LIST = [
+  '💰', '🛒', '🚗', '🏠', '🍕', '🎮', '🏥', '🔌', '🎁', '✈️', 
+  '👕', '🎓', '🛡️', '🍿', '🏋️', '📱', '🐕', '🌿', '🛠️', '💼',
+  '👶', '🍼', '🧸', '🍭', '🚲', '🎨', '📚', '💄', '💇', '🕯️'
+];
+
 const PRESET_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#475569'];
 
 const AccountItem: React.FC<{ 
@@ -93,7 +98,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   
   // États pour les catégories
   const [showAddCat, setShowAddCat] = useState(false);
-  const [newCat, setNewCat] = useState({ name: '', icon: '💰', color: '#6366f1' });
+  const [newCat, setNewCat] = useState({ name: '', icon: '👶', color: '#6366f1' });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +146,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       color: newCat.color
     };
     onUpdateCategories([...state.categories, cat]);
-    setNewCat({ name: '', icon: '💰', color: '#6366f1' });
+    setNewCat({ name: '', icon: '👶', color: '#6366f1' });
     setShowAddCat(false);
   };
 
@@ -150,7 +155,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         alert("Vous devez garder au moins une catégorie.");
         return;
     }
-    if (confirm("Supprimer cette catégorie ? Les transactions liées n'auront plus de nom de catégorie.")) {
+    if (confirm("Supprimer cette catégorie ? Les transactions liées n'auront plus d'icône spécifique.")) {
         onUpdateCategories(state.categories.filter(c => c.id !== id));
     }
   };
@@ -398,7 +403,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               
               <div className="space-y-2">
                 <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">1. Choisir une icône</span>
-                <div className="grid grid-cols-5 gap-1.5 p-2 bg-white rounded-2xl border border-indigo-100">
+                <div className="grid grid-cols-5 gap-1.5 p-2 bg-white rounded-2xl border border-indigo-100 max-h-40 overflow-y-auto no-scrollbar">
                   {EMOJI_LIST.map(e => (
                     <button key={e} onClick={() => setNewCat({...newCat, icon: e})} className={`w-8 h-8 flex items-center justify-center rounded-xl text-lg transition-all ${newCat.icon === e ? 'bg-indigo-600 shadow-md scale-110' : 'hover:bg-slate-50'}`}>
                       {e}
@@ -410,7 +415,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               <div className="space-y-2">
                 <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">2. Nom & Couleur</span>
                 <div className="flex gap-2">
-                  <input autoFocus value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="flex-1 bg-white border border-indigo-100 rounded-xl px-4 py-2 text-xs font-bold outline-none placeholder:text-slate-300" placeholder="Nom de la catégorie..." />
+                  <input autoFocus value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="flex-1 bg-white border border-indigo-100 rounded-xl px-4 py-2 text-xs font-bold outline-none placeholder:text-slate-300" placeholder="Ex: Bébé, École..." />
                   <div className="flex gap-1 p-1 bg-white rounded-xl border border-indigo-100 flex-wrap max-w-[100px] justify-center">
                     {PRESET_COLORS.map(c => (
                       <button key={c} onClick={() => setNewCat({...newCat, color: c})} className={`w-4 h-4 rounded-full transition-transform ${newCat.color === c ? 'ring-2 ring-offset-1 ring-indigo-400 scale-110' : 'hover:scale-110'}`} style={{ backgroundColor: c }} />
