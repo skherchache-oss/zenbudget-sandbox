@@ -47,13 +47,13 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIQUE DE RAFRAICHISSEMENT MANUEL ---
-  const handleManualRefresh = () => {
+  // --- LOGIQUE DE RAFRAICHISSEMENT GLOBAL ---
+  const handleFullAppRefresh = () => {
     setIsRefreshing(true);
-    // On force le refresh de l'IA
-    fetchAiAdvice(true);
-    // On simule un petit délai pour le feedback visuel du bouton
-    setTimeout(() => setIsRefreshing(false), 800);
+    // On attend un court instant pour que l'utilisateur voit l'animation
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   // --- LOGIQUE GENERATIVE AI ---
@@ -216,11 +216,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                 )}
               </div>
 
-              {/* BOUTON RAFRAICHIR DISCRET */}
+              {/* BOUTON RAFRAICHIR TOUTE L'APPLI */}
               <button 
-                onClick={handleManualRefresh}
+                onClick={handleFullAppRefresh}
                 className={`p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-white transition-all active:scale-90 ${isRefreshing ? 'text-indigo-500' : ''}`}
-                title="Rafraîchir les données"
+                title="Actualiser l'application"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
