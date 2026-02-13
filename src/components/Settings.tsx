@@ -21,20 +21,6 @@ interface SettingsProps {
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
-const PremiumModal: React.FC<{ isOpen: boolean; onClose: () => void; title: string }> = ({ isOpen, onClose, title }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300">
-      <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
-        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-4">👑</div>
-        <h3 className="text-xl font-black text-slate-900 mb-2">{title}</h3>
-        <p className="text-sm text-slate-500 font-medium mb-6">Cette fonctionnalité sera disponible prochainement dans l'abonnement ZenBudget Premium.</p>
-        <button onClick={onClose} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">D'accord ✨</button>
-      </div>
-    </div>
-  );
-};
-
 const AccountItem: React.FC<{ 
   acc: BudgetAccount; 
   isActive: boolean; 
@@ -57,7 +43,7 @@ const AccountItem: React.FC<{
 
   return ( 
     <div 
-      className={`flex items-center justify-between bg-white rounded-t-2xl p-3.5 border transition-all cursor-pointer ${isActive ? 'border-indigo-200 shadow-sm ring-2 ring-indigo-50/50' : 'border-slate-100 hover:border-slate-200'}`} 
+      className={`flex items-center justify-between bg-white rounded-2xl p-3.5 mb-2 border transition-all cursor-pointer ${isActive ? 'border-indigo-200 shadow-sm ring-2 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'}`} 
       onClick={() => onSelect(acc.id)} 
     > 
       <div className="flex items-center gap-3 min-w-0"> 
@@ -69,12 +55,16 @@ const AccountItem: React.FC<{
           {isActive && <span className="text-[7px] font-black text-indigo-500 uppercase tracking-[0.1em]">Compte actif</span>} 
         </div> 
       </div> 
+
       <div className="flex items-center gap-1"> 
         <button onClick={(e) => { e.stopPropagation(); onRename(acc); }} className="p-2 text-slate-300 hover:text-indigo-600"> 
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg> 
         </button> 
         {canDelete && ( 
-          <button onClick={handleDelete} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${isConfirmingDelete ? 'bg-red-500 text-white' : 'text-red-200 hover:text-red-400'}`}> 
+          <button 
+            onClick={handleDelete} 
+            className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase transition-all ${isConfirmingDelete ? 'bg-red-500 text-white' : 'text-red-200 hover:text-red-400'}`} 
+          > 
             {isConfirmingDelete ? 'Sûr ?' : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>} 
           </button> 
         )} 
@@ -92,7 +82,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [isUploading, setIsUploading] = useState(false);
   const [isEditingUserName, setIsEditingUserName] = useState(false);
   const [tempUserName, setTempUserName] = useState(user?.displayName || '');
-  const [premiumModal, setPremiumModal] = useState<{open: boolean, title: string}>({open: false, title: ""});
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -107,11 +96,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   ); 
 
   const handleCreateAccount = () => { 
-    if (state.accounts.length >= 1) {
-        setPremiumModal({ open: true, title: "Multi-comptes" });
-        setIsAddingAccount(false);
-        return;
-    }
     if (!newAccName.trim()) return; 
     const newAcc = createDefaultAccount(user?.uid || 'local-user'); 
     newAcc.name = newAccName.trim(); 
@@ -180,7 +164,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     }
   };
 
-  const compressImage = (file: File, size: number, quality: number): Promise<string> => {
+  const compressHighQuality = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -189,18 +173,19 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          canvas.width = size;
-          canvas.height = size;
+          const SIZE = 512;
+          canvas.width = SIZE;
+          canvas.height = SIZE;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            const ratio = Math.max(size / img.width, size / img.height);
-            const x = (size - img.width * ratio) / 2;
-            const y = (size - img.height * ratio) / 2;
+            const ratio = Math.max(SIZE / img.width, SIZE / img.height);
+            const x = (SIZE - img.width * ratio) / 2;
+            const y = (SIZE - img.height * ratio) / 2;
             ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, size, size);
+            ctx.fillRect(0, 0, SIZE, SIZE);
             ctx.drawImage(img, x, y, img.width * ratio, img.height * ratio);
           }
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
         };
       };
     });
@@ -211,15 +196,21 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     if (file && user) {
       setIsUploading(true);
       try {
-        const hdUrl = await compressImage(file, 512, 0.9);
-        localStorage.setItem(`user_photo_hd_${user.uid}`, hdUrl);
-        const tinyUrl = await compressImage(file, 40, 0.4);
-        onUpdateUser({ photoURL: hdUrl });
-        try {
-          await updateProfile(user, { photoURL: tinyUrl });
-        } catch (e) {
-          console.warn("Firebase sync error, local HD preserved.");
-        }
+        const highQualityUrl = await compressHighQuality(file);
+        localStorage.setItem(`user_photo_hd_${user.uid}`, highQualityUrl);
+        onUpdateUser({ photoURL: highQualityUrl });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 40; canvas.height = 40;
+        const img = new Image();
+        img.src = highQualityUrl;
+        img.onload = async () => {
+           canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
+           const tiny = canvas.toDataURL('image/jpeg', 0.2);
+           try {
+             await updateProfile(user, { photoURL: tiny });
+           } catch (e) { }
+        };
       } catch (err) {
         console.error("Erreur photo:", err);
       } finally {
@@ -232,6 +223,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const handleRemovePhoto = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user || isUploading) return;
+    
     if (confirm("Supprimer la photo de profil ?")) {
       setIsUploading(true);
       try {
@@ -251,50 +243,93 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
-      <PremiumModal isOpen={premiumModal.open} onClose={() => setPremiumModal({open: false, title: ""})} title={premiumModal.title} />
-
-      {/* PROFIL SECTION */}
+        
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
+          
           <div className="relative group">
             <div 
               onClick={() => photoInputRef.current?.click()}
               className={`w-20 h-20 rounded-[28px] bg-slate-50 border-4 border-white flex items-center justify-center overflow-hidden shadow-xl transition-all group-hover:ring-4 group-hover:ring-indigo-50 cursor-pointer ${isUploading ? 'opacity-50' : ''}`}
             >
-              {currentPhoto ? <img src={currentPhoto} alt="Profil" className="w-full h-full object-cover" /> : <span className="text-2xl font-black text-indigo-600 uppercase">{user?.displayName?.charAt(0) || 'Z'}</span>}
+              {currentPhoto ? (
+                <img src={currentPhoto} alt="Profil" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-black text-indigo-600 uppercase">
+                  {user?.displayName?.charAt(0) || 'Z'}
+                </span>
+              )}
+              
               <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                 </svg>
               </div>
-              {isUploading && <div className="absolute inset-0 flex items-center justify-center bg-black/20"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
+
+              {isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
             </div>
+            
             {currentPhoto && !isUploading && (
-              <button onClick={handleRemovePhoto} className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all z-10"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <button 
+                onClick={handleRemovePhoto}
+                className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all z-10"
+                title="Supprimer la photo"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             )}
+            
             <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
 
-          <div className="flex flex-col items-center justify-center w-full min-w-0 text-center">
+          <div className="flex flex-col items-center w-full min-w-0">
             {isEditingUserName ? (
-              <div className="w-full flex justify-center">
-                <input autoFocus value={tempUserName} onChange={e => setTempUserName(e.target.value)} onBlur={handleSaveUserName} onKeyDown={e => e.key === 'Enter' && handleSaveUserName()} className="w-full max-w-[200px] bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none" />
+              <div className="flex items-center gap-2 w-full max-w-[200px]">
+                <input 
+                  autoFocus 
+                  value={tempUserName}
+                  onChange={e => setTempUserName(e.target.value)}
+                  onBlur={handleSaveUserName}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveUserName()}
+                  className="w-full bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none"
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-2 mb-1 w-full cursor-pointer group" onClick={() => isRealUser && setIsEditingUserName(true)}>
-                <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">{user?.displayName || 'Utilisateur Invité'}</h3>
-                {isRealUser && <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>}
+              <div 
+                className="flex items-center gap-2 mb-1 max-w-full cursor-pointer group"
+                onClick={() => isRealUser && setIsEditingUserName(true)}
+              >
+                <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">
+                  {user?.displayName || 'Utilisateur Invité'}
+                </h3>
+                {isRealUser && (
+                  <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                )}
                 <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
               </div>
             )}
-            <p className="text-[11px] font-bold text-slate-400 truncate w-full max-w-[250px] mx-auto">{user?.email || 'Mode Hors-ligne'}</p>
+            <p className="text-[11px] font-bold text-slate-400 truncate w-full px-4">
+              {user?.email || 'Mode Hors-ligne'}
+            </p>
           </div>
 
-          <button onClick={() => isRealUser ? onLogout() : onLogin()} className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}>
+          <button 
+            onClick={() => isRealUser ? onLogout() : onLogin()}
+            className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}
+          >
             {isRealUser ? 'Se déconnecter de ZenBudget' : 'Se connecter / S\'inscrire'}
           </button>
         </div>
       </section>
 
-      {/* AIDE */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
@@ -308,22 +343,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* MES COMPTES & PARTAGE */}
       <section> 
-        <SectionTitle title="Mes Comptes & Partage" /> 
+        <SectionTitle title="Mes Comptes" /> 
         <div className="space-y-1"> 
           {state.accounts.map(acc => ( 
-            <div key={acc.id} className="group">
-              <AccountItem acc={acc} isActive={state.activeAccountId === acc.id} onDelete={onDeleteAccount} onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} onSelect={onSetActiveAccount} canDelete={state.accounts.length > 1} /> 
-              {state.activeAccountId === acc.id && (
-                <button onClick={() => setPremiumModal({ open: true, title: "Partage de compte" })} className="w-full mt-[-2px] mb-4 py-2.5 bg-white rounded-b-2xl border-x border-b border-slate-100 flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors shadow-sm">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Inviter un partenaire sur ce compte</span>
-                  <span className="text-[9px]">👑</span>
-                </button>
-              )}
-            </div>
+            <AccountItem key={acc.id} acc={acc} isActive={state.activeAccountId === acc.id} onDelete={onDeleteAccount} onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} onSelect={onSetActiveAccount} canDelete={state.accounts.length > 1} /> 
           ))} 
-          
+           
           {editingAccountId && ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mb-2"> 
               <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-slate-50 p-2.5 rounded-xl mb-2 text-xs font-bold outline-none" /> 
@@ -335,8 +361,8 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           )} 
 
           {!isAddingAccount ? ( 
-            <button onClick={() => state.accounts.length >= 1 ? setPremiumModal({open: true, title: "Multi-comptes"}) : setIsAddingAccount(true)} className={`w-full py-3.5 border-2 border-dashed border-slate-100 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl transition-all ${state.accounts.length >= 1 ? 'text-amber-500 opacity-60 border-amber-100' : 'text-slate-300 hover:border-indigo-200 hover:text-indigo-400'}`}> 
-              <IconPlus className="w-3 h-3" /> {state.accounts.length >= 1 ? "Ajouter un compte (Premium 👑)" : "Ajouter un compte"}
+            <button onClick={() => setIsAddingAccount(true)} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-400 transition-all"> 
+              <IconPlus className="w-3 h-3" /> Ajouter un compte 
             </button> 
           ) : ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mt-2"> 
@@ -350,33 +376,50 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* CYCLE BUDGETAIRE */}
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
-          <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-1">Définissez le jour de clôture du mois (jour de paie).</p>
+          <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-1">
+            Définissez le jour de clôture du mois (jour de paie).
+          </p>
           <div className="grid grid-cols-5 gap-1.5">
             {presets.map((day) => (
-              <button key={day} onClick={() => updateCycleDay(day)} className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${currentCycleDay === day ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>
+              <button
+                key={day}
+                onClick={() => updateCycleDay(day)}
+                className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
+                  currentCycleDay === day
+                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                    : 'border-slate-50 bg-slate-50 text-slate-400'
+                }`}
+              >
                 <span className="text-[11px] font-black">{day === 0 ? '31' : day}</span>
                 <span className="text-[5px] font-black uppercase tracking-tighter">{day === 0 ? 'Fin de mois' : 'Du mois'}</span>
               </button>
             ))}
             {isCustomDay && (
-              <button disabled className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg">
+              <button
+                disabled
+                className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg"
+              >
                 <span className="text-[11px] font-black">{currentCycleDay}</span>
                 <span className="text-[5px] font-black uppercase tracking-tighter">Actif</span>
               </button>
             )}
           </div>
           <form onSubmit={handleManualDayUpdate} className="flex gap-2">
-            <input type="number" min="1" max="31" value={manualDay} onChange={e => setManualDay(e.target.value)} placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" />
+            <input 
+              type="number" min="1" max="31" 
+              value={manualDay} 
+              onChange={e => setManualDay(e.target.value)} 
+              placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} 
+              className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" 
+            />
             <button type="submit" className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">OK</button>
           </form>
         </div>
       </section>
 
-      {/* SAUVEGARDE */}
       <section>
         <SectionTitle title="Sauvegarde" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
@@ -387,7 +430,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             </div>
           </button>
           <input type="file" ref={fileInputRef} hidden accept=".backup,.json" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
-          <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+          <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-slate-50">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div>
               <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Importer backup</span>
@@ -396,18 +439,35 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* FEEDBACK & DANGER ZONE */}
       <section className="pt-4 space-y-4"> 
         <div className="bg-slate-900 rounded-[32px] p-6 text-center relative overflow-hidden"> 
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full" /> 
-          <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed">Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !</p> 
-          <button onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`} className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl">Signaler un bug ou proposer une idée ✨</button> 
+          <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
+            Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
+          </p> 
+          <button      
+            onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}   
+            className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
+          > 
+            Signaler un bug ou proposer une idée ✨ 
+          </button> 
         </div> 
 
         <div className="flex flex-col gap-2">
-          <button onClick={onReset} className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl">Réinitialiser les données locales</button> 
+          <button      
+            onClick={onReset}      
+            className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl" 
+          > 
+            Réinitialiser les données locales
+          </button> 
+
           {isRealUser && (
-            <button onClick={handleDeleteUserAccount} className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl">Supprimer mon compte & données cloud</button> 
+            <button      
+              onClick={handleDeleteUserAccount}      
+              className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
+            > 
+              Supprimer mon compte & données cloud
+            </button> 
           )}
         </div>
       </section> 
