@@ -450,7 +450,15 @@ const App: React.FC = () => {
           <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Param." fullLabel="Paramètres" />
         </nav>
 
-        {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
+        {showAddModal && (
+          <AddTransactionModal 
+            categories={state.categories} 
+            onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} 
+            onAdd={handleUpsertTransaction} 
+            initialDate={modalInitialDate} 
+            editItem={editingTransaction} 
+          />
+        )}
         
         <AnimatePresence>
           {showWelcome && (
