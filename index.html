@@ -16,7 +16,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
     
     <script>
-      // On ne définit window.process que s'il n'existe pas pour ne pas écraser les variables de Vite/Vercel
       if (!window.process) window.process = { env: {} };
       if (!window.process.env) window.process.env = {};
     </script>
@@ -24,23 +23,18 @@
     <style>
         body { 
           font-family: 'Inter', sans-serif; 
-          background-color: #020617; /* Slate-950 pour éviter le flash blanc au départ */
+          background-color: #020617; 
           margin: 0; padding: 0;
           -webkit-tap-highlight-color: transparent;
-          overflow-x: hidden;
+          overflow: hidden; /* Empêche le scroll pendant le chargement */
         }
         #root { min-height: 100vh; }
-        .safe-top { padding-top: env(safe-area-inset-top); }
-        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Animation subtile pour le logo au chargement */
         @keyframes pulse-soft {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(0.98); }
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(0.96); opacity: 0.85; }
         }
-        .animate-pulse-soft { animation: pulse-soft 2s infinite ease-in-out; }
+        .animate-pulse-soft { animation: pulse-soft 2.5s infinite ease-in-out; }
     </style>
 
     <script type="importmap">
@@ -58,19 +52,19 @@
 </head>
 <body>
     <div id="root">
-        <div id="initial-loader" class="h-screen w-full flex flex-col items-center justify-center bg-slate-950">
-            <div class="flex flex-col items-center gap-4 animate-pulse-soft">
+        <div style="height: 100vh; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #020617;">
+            <div class="animate-pulse-soft" style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
                 <img 
                     src="/ZB-logo-192.png" 
                     alt="ZenBudget" 
-                    class="w-20 h-20 rounded-[24px] shadow-2xl border border-white/10"
+                    style="width: 120px; height: 120px; border-radius: 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255,255,255,0.1);"
                 />
-                <div class="text-center">
-                    <h1 class="text-3xl font-black tracking-tighter italic text-white">
+                <div style="text-align: center;">
+                    <h1 style="color: white; font-size: 36px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; margin: 0; line-height: 1;">
                         ZenBudget
                     </h1>
-                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mt-1">
-                        Chargement...
+                    <p style="color: #6366f1; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; margin-top: 8px; opacity: 0.8;">
+                        Chargement
                     </p>
                 </div>
             </div>
