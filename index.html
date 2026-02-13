@@ -24,7 +24,7 @@
     <style>
         body { 
           font-family: 'Inter', sans-serif; 
-          background-color: #f8f9fd; 
+          background-color: #020617; /* Slate-950 pour éviter le flash blanc au départ */
           margin: 0; padding: 0;
           -webkit-tap-highlight-color: transparent;
           overflow-x: hidden;
@@ -34,8 +34,13 @@
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        /* Animation subtile pour le logo au chargement */
+        @keyframes pulse-soft {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(0.98); }
+        }
+        .animate-pulse-soft { animation: pulse-soft 2s infinite ease-in-out; }
     </style>
 
     <script type="importmap">
@@ -52,7 +57,25 @@
     </script>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div id="initial-loader" class="h-screen w-full flex flex-col items-center justify-center bg-slate-950">
+            <div class="flex flex-col items-center gap-4 animate-pulse-soft">
+                <img 
+                    src="/ZB-logo-192.png" 
+                    alt="ZenBudget" 
+                    class="w-20 h-20 rounded-[24px] shadow-2xl border border-white/10"
+                />
+                <div class="text-center">
+                    <h1 class="text-3xl font-black tracking-tighter italic text-white">
+                        ZenBudget
+                    </h1>
+                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mt-1">
+                        Chargement...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
     <script type="module" src="/src/index.tsx"></script>
 </body>
 </html>
