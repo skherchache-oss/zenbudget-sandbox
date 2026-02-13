@@ -3,7 +3,7 @@ import { Transaction, Category, BudgetAccount } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -28,9 +28,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSwitchAccount, checkingAccountBalance, availableBalance, projectedBalance, carryOver,
   month, year, onPrevMonth, onNextMonth
 }) => {
-  // Utilisation de ta phrase préférée en état initial
   const [aiAdvice, setAiAdvice] = useState<string>("Votre sérénité est votre meilleur investissement. ✨");
   const [loadingAdvice, setLoadingAdvice] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false); 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,6 +47,15 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- LOGIQUE DE RAFRAICHISSEMENT MANUEL ---
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    // On force le refresh de l'IA
+    fetchAiAdvice(true);
+    // On simule un petit délai pour le feedback visuel du bouton
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
+
   // --- LOGIQUE GENERATIVE AI ---
   const fetchAiAdvice = async (force: boolean = false) => {
     const API_KEY = 
@@ -56,7 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     if (!API_KEY) {
       console.warn("VITE_GEMINI_API_KEY est manquante.");
-      return; // On garde la phrase de sérénité par défaut
+      return;
     }
 
     const cacheKey = `zentip_${activeAccount.id}_${month}_${year}`;
@@ -178,32 +187,43 @@ const Dashboard: React.FC<DashboardProps> = ({
           
           <div className="flex flex-col">
             <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">Mon budget</h2>
-            <div className="relative mt-3" ref={menuRef}>
-              <button 
-                onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
-              >
-                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{activeAccount.name}</span>
-                {allAccounts.length > 1 && (
-                  <svg className={`w-3 h-3 text-slate-400 transition-transform duration-300 ${isAccountMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                  </svg>
+            <div className="flex items-center gap-2 mt-3">
+              <div className="relative" ref={menuRef}>
+                <button 
+                  onClick={() => allAccounts.length > 1 && setIsAccountMenuOpen(!isAccountMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm active:scale-95 transition-all"
+                >
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{activeAccount.name}</span>
+                  {allAccounts.length > 1 && (
+                    <svg className={`w-3 h-3 text-slate-400 transition-transform duration-300 ${isAccountMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
+                {isAccountMenuOpen && (
+                  <div className="absolute left-0 mt-2 w-max min-w-[180px] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden fade-in py-1">
+                    {allAccounts.map(acc => (
+                      <button
+                        key={acc.id}
+                        onClick={() => { onSwitchAccount(acc.id); setIsAccountMenuOpen(false); }}
+                        className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${acc.id === activeAccount.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        {acc.name}
+                      </button>
+                    ))}
+                  </div>
                 )}
+              </div>
+
+              {/* BOUTON RAFRAICHIR DISCRET */}
+              <button 
+                onClick={handleManualRefresh}
+                className={`p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-white transition-all active:scale-90 ${isRefreshing ? 'text-indigo-500' : ''}`}
+                title="Rafraîchir les données"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
-              {isAccountMenuOpen && (
-                <div className="absolute left-0 mt-2 w-max min-w-[180px] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden fade-in py-1">
-                  {allAccounts.map(acc => (
-                    <button
-                      key={acc.id}
-                      onClick={() => { onSwitchAccount(acc.id); setIsAccountMenuOpen(false); }}
-                      className={`w-full text-left px-5 py-3 text-[10px] font-bold uppercase tracking-wider transition-colors ${acc.id === activeAccount.id ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      {acc.name}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
