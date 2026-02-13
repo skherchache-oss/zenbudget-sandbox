@@ -27,8 +27,9 @@ const AccountItem: React.FC<{
   onDelete: (id: string) => void; 
   onRename: (acc: BudgetAccount) => void; 
   onSelect: (id: string) => void; 
+  onShowPremium: () => void;
   canDelete: boolean; 
-}> = ({ acc, isActive, onDelete, onRename, onSelect, canDelete }) => { 
+}> = ({ acc, isActive, onDelete, onRename, onSelect, onShowPremium, canDelete }) => { 
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false); 
 
   const handleDelete = (e: React.MouseEvent) => { 
@@ -57,6 +58,10 @@ const AccountItem: React.FC<{
       </div> 
 
       <div className="flex items-center gap-1"> 
+        <button onClick={(e) => { e.stopPropagation(); onShowPremium(); }} className="p-2 text-slate-300 hover:text-amber-500 flex items-center gap-1"> 
+          <span className="text-[10px]">👑</span>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+        </button> 
         <button onClick={(e) => { e.stopPropagation(); onRename(acc); }} className="p-2 text-slate-300 hover:text-indigo-600"> 
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg> 
         </button> 
@@ -74,7 +79,7 @@ const AccountItem: React.FC<{
 }; 
 
 const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout, onUpdateUser }) => { 
-  const [isAddingAccount, setIsAddingAccount] = useState(false); 
+  const [showPremiumModal, setShowPremiumModal] = useState<'ACCOUNT' | 'SHARE' | null>(null);
   const [newAccName, setNewAccName] = useState(''); 
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
   const [editName, setEditName] = useState(''); 
@@ -102,7 +107,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     onUpdateAccounts([...state.accounts, newAcc]); 
     onSetActiveAccount(newAcc.id); 
     setNewAccName(''); 
-    setIsAddingAccount(false); 
   }; 
 
   const handleSaveRename = () => { 
@@ -205,11 +209,11 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         const img = new Image();
         img.src = highQualityUrl;
         img.onload = async () => {
-           canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
-           const tiny = canvas.toDataURL('image/jpeg', 0.2);
-           try {
-             await updateProfile(user, { photoURL: tiny });
-           } catch (e) { }
+            canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
+            const tiny = canvas.toDataURL('image/jpeg', 0.2);
+            try {
+              await updateProfile(user, { photoURL: tiny });
+            } catch (e) { }
         };
       } catch (err) {
         console.error("Erreur photo:", err);
@@ -244,6 +248,23 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
         
+      {showPremiumModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in zoom-in duration-200">
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
+            <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
+            <h3 className="text-xl font-black text-slate-900 mb-2">
+              {showPremiumModal === 'ACCOUNT' ? 'Multi-comptes' : 'Partage de compte'}
+            </h3>
+            <p className="text-sm text-slate-500 font-medium mb-6">
+              {showPremiumModal === 'ACCOUNT' 
+                ? 'La création de comptes illimités sera disponible prochainement dans ZenBudget Premium.'
+                : 'Le partage de votre budget en temps réel avec un proche arrive bientôt dans la version Premium.'}
+            </p>
+            <button onClick={() => setShowPremiumModal(null)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">D'accord ✨</button>
+          </div>
+        </div>
+      )}
+
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           
@@ -347,7 +368,16 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         <SectionTitle title="Mes Comptes" /> 
         <div className="space-y-1"> 
           {state.accounts.map(acc => ( 
-            <AccountItem key={acc.id} acc={acc} isActive={state.activeAccountId === acc.id} onDelete={onDeleteAccount} onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} onSelect={onSetActiveAccount} canDelete={state.accounts.length > 1} /> 
+            <AccountItem 
+              key={acc.id} 
+              acc={acc} 
+              isActive={state.activeAccountId === acc.id} 
+              onDelete={onDeleteAccount} 
+              onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} 
+              onSelect={onSetActiveAccount} 
+              onShowPremium={() => setShowPremiumModal('SHARE')}
+              canDelete={state.accounts.length > 1} 
+            /> 
           ))} 
            
           {editingAccountId && ( 
@@ -360,19 +390,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             </div> 
           )} 
 
-          {!isAddingAccount ? ( 
-            <button onClick={() => setIsAddingAccount(true)} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-400 transition-all"> 
-              <IconPlus className="w-3 h-3" /> Ajouter un compte 
-            </button> 
-          ) : ( 
-            <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mt-2"> 
-              <input autoFocus value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Nom du compte..." className="w-full bg-slate-50 p-2.5 rounded-xl mb-2 text-xs font-bold outline-none" /> 
-              <div className="flex gap-2"> 
-                <button onClick={() => setIsAddingAccount(false)} className="flex-1 py-2 text-[9px] font-black uppercase text-slate-400">Annuler</button> 
-                <button onClick={handleCreateAccount} className="flex-1 py-2 text-[9px] font-black uppercase text-white bg-indigo-600 rounded-xl">Créer</button> 
-              </div> 
-            </div> 
-          )} 
+          <button 
+            onClick={() => setShowPremiumModal('ACCOUNT')} 
+            className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-amber-200 hover:text-amber-500 transition-all group"
+          > 
+            <span className="opacity-40 group-hover:opacity-100">👑</span>
+            <IconPlus className="w-3 h-3" /> Ajouter un compte 
+          </button> 
         </div> 
       </section>
 
