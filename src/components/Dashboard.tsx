@@ -47,16 +47,13 @@ const Dashboard: React.FC<DashboardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- LOGIQUE DE RAFRAICHISSEMENT GLOBAL ---
   const handleFullAppRefresh = () => {
     setIsRefreshing(true);
-    // On attend un court instant pour que l'utilisateur voit l'animation
     setTimeout(() => {
       window.location.reload();
     }, 500);
   };
 
-  // --- LOGIQUE GENERATIVE AI ---
   const fetchAiAdvice = async (force: boolean = false) => {
     const API_KEY = 
       import.meta.env?.VITE_GEMINI_API_KEY || 
@@ -134,7 +131,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     transactions.filter(t => t.type === 'EXPENSE').forEach(t => {
       if (!map[t.categoryId]) map[t.categoryId] = { value: 0, notes: [] };
       map[t.categoryId].value += t.amount;
-      if (t.comment) map[t.categoryId].notes.push(t.comment);
+      // On récupère les commentaires (notes) et on nettoie les doublons
+      if (t.comment && t.comment.trim() !== "") {
+        map[t.categoryId].notes.push(t.comment.trim());
+      }
     });
     const total = stats.expenses || 1;
     return Object.entries(map).map(([id, data]) => {
@@ -146,7 +146,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         color: cat?.color || '#94a3b8', 
         icon: cat?.icon || '📦', 
         percent: (data.value / total) * 100,
-        notes: Array.from(new Set(data.notes)).slice(0, 3)
+        // On garde les 3 notes les plus récentes et uniques
+        notes: Array.from(new Set(data.notes.reverse())).slice(0, 3)
       };
     }).sort((a, b) => b.value - a.value);
   }, [transactions, categories, stats.expenses]);
@@ -216,7 +217,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                 )}
               </div>
 
-              {/* BOUTON RAFRAICHIR TOUTE L'APPLI */}
               <button 
                 onClick={handleFullAppRefresh}
                 className={`p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-white transition-all active:scale-90 ${isRefreshing ? 'text-indigo-500' : ''}`}
@@ -239,7 +239,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
       </div>
 
-      {/* CARTES DE SOLDE */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-slate-900 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
@@ -262,7 +261,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* ZEN TIP BOX */}
       <div 
         className="bg-indigo-50/50 backdrop-blur-sm p-6 rounded-[30px] flex items-center gap-5 border border-indigo-100/50 cursor-pointer hover:bg-indigo-50 transition-all active:scale-95" 
         onClick={() => !loadingAdvice && fetchAiAdvice(true)}
@@ -277,7 +275,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* GRAPHIQUE */}
+      {/* GRAPHIQUE AVEC NOTES AJOUTÉES */}
       <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
         <div className="flex flex-col items-center mb-10">
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
@@ -296,21 +294,32 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5">
+        <div className="grid grid-cols-1 gap-6">
           {categorySummary.map((cat) => (
             <div key={cat.id} className="group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
                   {cat.icon}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-[11px] font-black uppercase text-slate-800">{cat.name}</span>
+                    <span className="text-[11px] font-black uppercase text-slate-800 truncate">{cat.name}</span>
                     <span className="text-[13px] font-black text-slate-900">{formatVal(cat.value)}€</span>
                   </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
                     <div className="h-full rounded-full" style={{ width: `${cat.percent}%`, backgroundColor: cat.color }} />
                   </div>
+                  
+                  {/* AFFICHAGE DES NOTES DES TRANSACTIONS */}
+                  {cat.notes.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {cat.notes.map((note, i) => (
+                        <span key={i} className="text-[9px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                          {note}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
