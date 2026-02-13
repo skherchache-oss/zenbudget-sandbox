@@ -65,7 +65,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   return (
-    // Fond noir sur desktop (lg), blanc sur mobile
+    /* Fond noir sur desktop (lg), blanc sur mobile */
     <div className="h-screen w-full flex items-center justify-center bg-white lg:bg-slate-950 font-sans overflow-hidden">
       
       {/* Container Format Tablette sur Desktop, Full sur Mobile */}
@@ -74,6 +74,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
         {/* Header / Logo */}
         <div className="w-full flex flex-col items-center shrink-0">
           <div className="w-16 h-16 bg-slate-900 rounded-[22px] shadow-lg flex items-center justify-center mb-4 transform -rotate-3 shrink-0">
+            {/* Utilisation du nouveau IconLogo */}
             <IconLogo className="w-10 h-10 text-white" />
           </div>
           <div className="text-center">
