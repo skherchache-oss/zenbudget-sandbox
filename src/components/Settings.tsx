@@ -21,6 +21,10 @@ interface SettingsProps {
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
+// --- CONSTANTES POUR LA CRÉATION ---
+const EMOJI_LIST = ['💰', '🛒', '🚗', '🏠', '🍕', '🎮', '🏥', '🔌', '🎁', '✈️', '👕', '🎓', '🛡️', '🍿', '🏋️', '📱', '🐕', '🌿', '🛠️', '💼'];
+const PRESET_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#475569'];
+
 const AccountItem: React.FC<{ 
   acc: BudgetAccount; 
   isActive: boolean; 
@@ -89,7 +93,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   
   // États pour les catégories
   const [showAddCat, setShowAddCat] = useState(false);
-  const [newCat, setNewCat] = useState({ name: '', icon: '📦', color: '#6366f1' });
+  const [newCat, setNewCat] = useState({ name: '', icon: '💰', color: '#6366f1' });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -131,22 +135,23 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const handleAddCategory = () => {
     if (!newCat.name.trim()) return;
     const cat: Category = {
-      id: `cat-custom-${generateId()}`,
+      id: `cat-user-${generateId()}`,
       name: newCat.name.trim(),
       icon: newCat.icon,
       color: newCat.color
     };
     onUpdateCategories([...state.categories, cat]);
-    setNewCat({ name: '', icon: '📦', color: '#6366f1' });
+    setNewCat({ name: '', icon: '💰', color: '#6366f1' });
     setShowAddCat(false);
   };
 
   const handleDeleteCategory = (id: string) => {
-    // On empêche de supprimer les catégories par défaut pour la stabilité
-    if (id.startsWith('cat-')) {
-       onUpdateCategories(state.categories.filter(c => c.id !== id));
-    } else {
-       alert("Cette catégorie système ne peut pas être supprimée.");
+    if (state.categories.length <= 1) {
+        alert("Vous devez garder au moins une catégorie.");
+        return;
+    }
+    if (confirm("Supprimer cette catégorie ? Les transactions liées n'auront plus de nom de catégorie.")) {
+        onUpdateCategories(state.categories.filter(c => c.id !== id));
     }
   };
 
@@ -273,6 +278,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       )}
 
+      {/* PROFIL SECTION */}
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
           <div className="relative group">
@@ -318,6 +324,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
+      {/* AIDE */}
       <section> 
         <SectionTitle title="Aide" /> 
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
@@ -331,6 +338,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
+      {/* COMPTES */}
       <section> 
         <SectionTitle title="Mes Comptes" /> 
         <div className="space-y-1"> 
@@ -364,44 +372,67 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* --- NOUVELLE SECTION CATÉGORIES --- */}
+      {/* GESTION CATÉGORIES AMÉLIORÉE */}
       <section>
         <SectionTitle title="Mes Catégories" />
-        <div className="bg-white rounded-[24px] border border-slate-50 p-4 shadow-sm">
-          <div className="flex flex-wrap gap-2 mb-4">
+        <div className="bg-white rounded-[32px] border border-slate-100 p-5 shadow-sm space-y-5">
+          
+          <div className="grid grid-cols-2 gap-2">
             {state.categories.map(cat => (
-              <div key={cat.id} className="group relative flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                <span className="text-sm">{cat.icon}</span>
-                <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">{cat.name}</span>
-                {cat.id.includes('custom') && (
-                  <button onClick={() => handleDeleteCategory(cat.id)} className="ml-1 text-slate-300 hover:text-red-500">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                )}
+              <div key={cat.id} className="group flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 transition-all">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0" style={{ backgroundColor: `${cat.color}15` }}>
+                    {cat.icon}
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-tight text-slate-600 truncate">{cat.name}</span>
+                </div>
+                <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
             ))}
           </div>
 
           {showAddCat ? (
-            <div className="space-y-3 bg-slate-50 p-3 rounded-2xl animate-in fade-in slide-in-from-top-2">
-              <div className="flex gap-2">
-                <input value={newCat.icon} onChange={e => setNewCat({...newCat, icon: e.target.value})} className="w-12 bg-white border border-slate-200 rounded-xl p-2 text-center text-sm outline-none" placeholder="Icon" />
-                <input value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="flex-1 bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none" placeholder="Nom de la catégorie..." />
+            <div className="p-4 bg-indigo-50/50 rounded-[24px] border border-indigo-100 space-y-4 animate-in slide-in-from-top-4 duration-300">
+              
+              <div className="space-y-2">
+                <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">1. Choisir une icône</span>
+                <div className="grid grid-cols-5 gap-1.5 p-2 bg-white rounded-2xl border border-indigo-100">
+                  {EMOJI_LIST.map(e => (
+                    <button key={e} onClick={() => setNewCat({...newCat, icon: e})} className={`w-8 h-8 flex items-center justify-center rounded-xl text-lg transition-all ${newCat.icon === e ? 'bg-indigo-600 shadow-md scale-110' : 'hover:bg-slate-50'}`}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <input type="color" value={newCat.color} onChange={e => setNewCat({...newCat, color: e.target.value})} className="w-10 h-10 rounded-lg overflow-hidden border-none" />
-                <button onClick={handleAddCategory} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Ajouter</button>
-                <button onClick={() => setShowAddCat(false)} className="px-4 py-2.5 text-slate-400 text-[9px] font-black uppercase">Annuler</button>
+
+              <div className="space-y-2">
+                <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">2. Nom & Couleur</span>
+                <div className="flex gap-2">
+                  <input autoFocus value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="flex-1 bg-white border border-indigo-100 rounded-xl px-4 py-2 text-xs font-bold outline-none placeholder:text-slate-300" placeholder="Nom de la catégorie..." />
+                  <div className="flex gap-1 p-1 bg-white rounded-xl border border-indigo-100 flex-wrap max-w-[100px] justify-center">
+                    {PRESET_COLORS.map(c => (
+                      <button key={c} onClick={() => setNewCat({...newCat, color: c})} className={`w-4 h-4 rounded-full transition-transform ${newCat.color === c ? 'ring-2 ring-offset-1 ring-indigo-400 scale-110' : 'hover:scale-110'}`} style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button onClick={handleAddCategory} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200">Enregistrer</button>
+                <button onClick={() => setShowAddCat(false)} className="px-5 py-3 text-slate-400 text-[9px] font-black uppercase hover:text-slate-600">Annuler</button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setShowAddCat(true)} className="w-full py-3 bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-dashed border-slate-200 rounded-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
-              <IconPlus className="w-3 h-3" /> Créer une catégorie
+            <button onClick={() => setShowAddCat(true)} className="w-full py-4 border-2 border-dashed border-indigo-100 text-indigo-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:bg-indigo-50 transition-all">
+              <IconPlus className="w-3 h-3" /> Ajouter une catégorie
             </button>
           )}
         </div>
       </section>
 
+      {/* CYCLE BUDGÉTAIRE */}
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
@@ -422,6 +453,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
+      {/* SAUVEGARDE */}
       <section>
         <SectionTitle title="Sauvegarde" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
@@ -435,6 +467,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
+      {/* FOOTER & DANGER ZONE */}
       <section className="pt-4 space-y-4"> 
         <div className="bg-slate-900 rounded-[32px] p-6 text-center relative overflow-hidden"> 
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full" /> 
