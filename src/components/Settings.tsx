@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'; 
 import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
-import { createDefaultAccount } from '../store'; 
+import { createDefaultAccount, generateId } from '../store'; 
 import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
 
 interface SettingsProps { 
@@ -16,7 +16,6 @@ interface SettingsProps {
   onLogin: () => void; 
   onLogout: () => void; 
   onShowWelcome: () => void; 
-  // Modification ici : on Backup accepte maintenant optionnellement un nom de compte
   onBackup: (accountName?: string) => void;
   onImport: (file: File) => void;
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
@@ -79,9 +78,8 @@ const AccountItem: React.FC<{
   ); 
 }; 
 
-const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout, onUpdateUser }) => { 
+const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout, onUpdateUser, onUpdateCategories }) => { 
   const [showPremiumModal, setShowPremiumModal] = useState<'ACCOUNT' | 'SHARE' | null>(null);
-  const [newAccName, setNewAccName] = useState(''); 
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
@@ -89,6 +87,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [isEditingUserName, setIsEditingUserName] = useState(false);
   const [tempUserName, setTempUserName] = useState(user?.displayName || '');
   
+  // États pour les catégories
+  const [showAddCat, setShowAddCat] = useState(false);
+  const [newCat, setNewCat] = useState({ name: '', icon: '📦', color: '#6366f1' });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,15 +102,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const SectionTitle: React.FC<{ title: string }> = ({ title }) => ( 
     <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 mb-3">{title}</h2> 
   ); 
-
-  const handleCreateAccount = () => { 
-    if (!newAccName.trim()) return; 
-    const newAcc = createDefaultAccount(user?.uid || 'local-user'); 
-    newAcc.name = newAccName.trim(); 
-    onUpdateAccounts([...state.accounts, newAcc]); 
-    onSetActiveAccount(newAcc.id); 
-    setNewAccName(''); 
-  }; 
 
   const handleSaveRename = () => { 
     if (!editingAccountId || !editName.trim()) { 
@@ -132,6 +125,28 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
     } catch (err) {
       console.error("Erreur mise à jour nom:", err);
       setIsEditingUserName(false);
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (!newCat.name.trim()) return;
+    const cat: Category = {
+      id: `cat-custom-${generateId()}`,
+      name: newCat.name.trim(),
+      icon: newCat.icon,
+      color: newCat.color
+    };
+    onUpdateCategories([...state.categories, cat]);
+    setNewCat({ name: '', icon: '📦', color: '#6366f1' });
+    setShowAddCat(false);
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    // On empêche de supprimer les catégories par défaut pour la stabilité
+    if (id.startsWith('cat-')) {
+       onUpdateCategories(state.categories.filter(c => c.id !== id));
+    } else {
+       alert("Cette catégorie système ne peut pas être supprimée.");
     }
   };
 
@@ -204,7 +219,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         const highQualityUrl = await compressHighQuality(file);
         localStorage.setItem(`user_photo_hd_${user.uid}`, highQualityUrl);
         onUpdateUser({ photoURL: highQualityUrl });
-
         const canvas = document.createElement('canvas');
         canvas.width = 40; canvas.height = 40;
         const img = new Image();
@@ -212,12 +226,9 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         img.onload = async () => {
             canvas.getContext('2d')?.drawImage(img, 0, 0, 40, 40);
             const tiny = canvas.toDataURL('image/jpeg', 0.2);
-            try {
-              await updateProfile(user, { photoURL: tiny });
-            } catch (e) { }
+            try { await updateProfile(user, { photoURL: tiny }); } catch (e) { }
         };
-      } catch (err) {
-        console.error("Erreur photo:", err);
+      } catch (err) { console.error("Erreur photo:", err);
       } finally {
         setIsUploading(false);
         if (photoInputRef.current) photoInputRef.current.value = "";
@@ -228,18 +239,14 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const handleRemovePhoto = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user || isUploading) return;
-    
     if (confirm("Supprimer la photo de profil ?")) {
       setIsUploading(true);
       try {
         localStorage.removeItem(`user_photo_hd_${user.uid}`);
         await updateProfile(user, { photoURL: null });
         onUpdateUser({ photoURL: null });
-      } catch (err) {
-        console.error("Erreur suppression photo:", err);
-      } finally {
-        setIsUploading(false);
-      }
+      } catch (err) { console.error("Erreur suppression photo:", err);
+      } finally { setIsUploading(false); }
     }
   };
 
@@ -268,7 +275,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
         <div className="flex flex-col items-center text-center gap-4">
-          
           <div className="relative group">
             <div 
               onClick={() => photoInputRef.current?.click()}
@@ -281,74 +287,34 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
                   {user?.displayName?.charAt(0) || 'Z'}
                 </span>
               )}
-              
               <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                 </svg>
+                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
               </div>
-
-              {isUploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
+              {isUploading && <div className="absolute inset-0 flex items-center justify-center bg-black/20"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
             </div>
-            
             {currentPhoto && !isUploading && (
-              <button 
-                onClick={handleRemovePhoto}
-                className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all z-10"
-                title="Supprimer la photo"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button onClick={handleRemovePhoto} className="absolute -top-1 -right-1 w-6 h-6 bg-white text-slate-300 hover:text-red-500 hover:scale-110 border border-slate-100 rounded-full shadow-sm flex items-center justify-center transition-all z-10">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}
-            
             <input type="file" ref={photoInputRef} hidden accept="image/*" onChange={handlePhotoChange} />
           </div>
 
           <div className="flex flex-col items-center w-full min-w-0">
             {isEditingUserName ? (
               <div className="flex items-center gap-2 w-full max-w-[200px]">
-                <input 
-                  autoFocus 
-                  value={tempUserName}
-                  onChange={e => setTempUserName(e.target.value)}
-                  onBlur={handleSaveUserName}
-                  onKeyDown={e => e.key === 'Enter' && handleSaveUserName()}
-                  className="w-full bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none"
-                />
+                <input autoFocus value={tempUserName} onChange={e => setTempUserName(e.target.value)} onBlur={handleSaveUserName} onKeyDown={e => e.key === 'Enter' && handleSaveUserName()} className="w-full bg-slate-50 border-2 border-indigo-100 rounded-xl px-3 py-1.5 text-center text-sm font-black text-slate-800 outline-none" />
               </div>
             ) : (
-              <div 
-                className="flex items-center gap-2 mb-1 max-w-full cursor-pointer group"
-                onClick={() => isRealUser && setIsEditingUserName(true)}
-              >
-                <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">
-                  {user?.displayName || 'Utilisateur Invité'}
-                </h3>
-                {isRealUser && (
-                  <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                )}
+              <div className="flex items-center gap-2 mb-1 max-w-full cursor-pointer group" onClick={() => isRealUser && setIsEditingUserName(true)}>
+                <h3 className="font-black text-slate-800 text-lg leading-tight truncate group-hover:text-indigo-600 transition-colors">{user?.displayName || 'Utilisateur Invité'}</h3>
+                {isRealUser && <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>}
                 <div className={`w-2 h-2 rounded-full shrink-0 ${isRealUser ? 'bg-emerald-500' : 'bg-amber-400'}`} />
               </div>
             )}
-            <p className="text-[11px] font-bold text-slate-400 truncate w-full px-4">
-              {user?.email || 'Mode Hors-ligne'}
-            </p>
+            <p className="text-[11px] font-bold text-slate-400 truncate w-full px-4">{user?.email || 'Mode Hors-ligne'}</p>
           </div>
-
-          <button 
-            onClick={() => isRealUser ? onLogout() : onLogin()}
-            className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}
-          >
-            {isRealUser ? 'Se déconnecter de ZenBudget' : 'Se connecter / S\'inscrire'}
-          </button>
+          <button onClick={() => isRealUser ? onLogout() : onLogin()} className={`w-full py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${!isRealUser ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-50 text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100'}`}>{isRealUser ? 'Se déconnecter de ZenBudget' : 'Se connecter / S\'inscrire'}</button>
         </div>
       </section>
 
@@ -391,55 +357,66 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             </div> 
           )} 
 
-          <button 
-            onClick={() => setShowPremiumModal('ACCOUNT')} 
-            className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-amber-200 hover:text-amber-500 transition-all group"
-          > 
+          <button onClick={() => setShowPremiumModal('ACCOUNT')} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-amber-200 hover:text-amber-500 transition-all group"> 
             <span className="opacity-40 group-hover:opacity-100">👑</span>
             <IconPlus className="w-3 h-3" /> Ajouter un compte 
           </button> 
         </div> 
       </section>
 
+      {/* --- NOUVELLE SECTION CATÉGORIES --- */}
+      <section>
+        <SectionTitle title="Mes Catégories" />
+        <div className="bg-white rounded-[24px] border border-slate-50 p-4 shadow-sm">
+          <div className="flex flex-wrap gap-2 mb-4">
+            {state.categories.map(cat => (
+              <div key={cat.id} className="group relative flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                <span className="text-sm">{cat.icon}</span>
+                <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">{cat.name}</span>
+                {cat.id.includes('custom') && (
+                  <button onClick={() => handleDeleteCategory(cat.id)} className="ml-1 text-slate-300 hover:text-red-500">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {showAddCat ? (
+            <div className="space-y-3 bg-slate-50 p-3 rounded-2xl animate-in fade-in slide-in-from-top-2">
+              <div className="flex gap-2">
+                <input value={newCat.icon} onChange={e => setNewCat({...newCat, icon: e.target.value})} className="w-12 bg-white border border-slate-200 rounded-xl p-2 text-center text-sm outline-none" placeholder="Icon" />
+                <input value={newCat.name} onChange={e => setNewCat({...newCat, name: e.target.value})} className="flex-1 bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none" placeholder="Nom de la catégorie..." />
+              </div>
+              <div className="flex items-center gap-3">
+                <input type="color" value={newCat.color} onChange={e => setNewCat({...newCat, color: e.target.value})} className="w-10 h-10 rounded-lg overflow-hidden border-none" />
+                <button onClick={handleAddCategory} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Ajouter</button>
+                <button onClick={() => setShowAddCat(false)} className="px-4 py-2.5 text-slate-400 text-[9px] font-black uppercase">Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddCat(true)} className="w-full py-3 bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-dashed border-slate-200 rounded-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
+              <IconPlus className="w-3 h-3" /> Créer une catégorie
+            </button>
+          )}
+        </div>
+      </section>
+
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
-          <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-1">
-            Définissez le jour de clôture du mois (jour de paie).
-          </p>
+          <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-1">Définissez le jour de clôture du mois (jour de paie).</p>
           <div className="grid grid-cols-5 gap-1.5">
             {presets.map((day) => (
-              <button
-                key={day}
-                onClick={() => updateCycleDay(day)}
-                className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${
-                  currentCycleDay === day
-                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-50 bg-slate-50 text-slate-400'
-                }`}
-              >
+              <button key={day} onClick={() => updateCycleDay(day)} className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${currentCycleDay === day ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>
                 <span className="text-[11px] font-black">{day === 0 ? '31' : day}</span>
                 <span className="text-[5px] font-black uppercase tracking-tighter">{day === 0 ? 'Fin de mois' : 'Du mois'}</span>
               </button>
             ))}
-            {isCustomDay && (
-              <button
-                disabled
-                className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg"
-              >
-                <span className="text-[11px] font-black">{currentCycleDay}</span>
-                <span className="text-[5px] font-black uppercase tracking-tighter">Actif</span>
-              </button>
-            )}
+            {isCustomDay && <button disabled className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg"><span className="text-[11px] font-black">{currentCycleDay}</span><span className="text-[5px] font-black uppercase tracking-tighter">Actif</span></button>}
           </div>
           <form onSubmit={handleManualDayUpdate} className="flex gap-2">
-            <input 
-              type="number" min="1" max="31" 
-              value={manualDay} 
-              onChange={e => setManualDay(e.target.value)} 
-              placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} 
-              className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" 
-            />
+            <input type="number" min="1" max="31" value={manualDay} onChange={e => setManualDay(e.target.value)} placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" />
             <button type="submit" className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">OK</button>
           </form>
         </div>
@@ -448,22 +425,12 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section>
         <SectionTitle title="Sauvegarde" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
-          {/* Modification de l'appel ici : on passe le nom du compte actif */}
-          <button 
-            onClick={() => onBackup(activeAccount?.name)} 
-            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 border-b border-slate-50"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px]">💾</div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Exporter backup</span>
-            </div>
+          <button onClick={() => onBackup(activeAccount?.name)} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 border-b border-slate-50">
+            <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px]">💾</div><span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Exporter backup</span></div>
           </button>
           <input type="file" ref={fileInputRef} hidden accept=".backup,.json" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
           <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-slate-50">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Importer backup</span>
-            </div>
+            <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div><span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Importer backup</span></div>
           </button>
         </div>
       </section>
@@ -471,39 +438,17 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section className="pt-4 space-y-4"> 
         <div className="bg-slate-900 rounded-[32px] p-6 text-center relative overflow-hidden"> 
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-3xl rounded-full" /> 
-          <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed"> 
-            Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !
-          </p> 
-          <button      
-            onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`}   
-            className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl" 
-          > 
-            Signaler un bug ou proposer une idée ✨ 
-          </button> 
+          <p className="text-[11px] font-medium text-indigo-100/80 mb-4 px-2 leading-relaxed">Un bug ou une idée ? Dites-le nous pour améliorer ZenBudget !</p> 
+          <button onClick={() => window.location.href = `mailto:s.kherchache@gmail.com?subject=ZenBudget : Retour Bug/Idée`} className="w-full py-3.5 bg-white text-slate-900 font-black rounded-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all shadow-xl">Signaler un bug ou proposer une idée ✨</button> 
         </div> 
 
         <div className="flex flex-col gap-2">
-          <button      
-            onClick={onReset}      
-            className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl" 
-          > 
-            Réinitialiser les données locales
-          </button> 
-
-          {isRealUser && (
-            <button      
-              onClick={handleDeleteUserAccount}      
-              className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl" 
-            > 
-              Supprimer mon compte & données cloud
-            </button> 
-          )}
+          <button onClick={onReset} className="w-full py-3 text-slate-400 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-slate-50 rounded-xl">Réinitialiser les données locales</button> 
+          {isRealUser && <button onClick={handleDeleteUserAccount} className="w-full py-3 text-red-300 font-black uppercase text-[8px] tracking-[0.2em] active:scale-95 transition-all hover:bg-red-50 rounded-xl">Supprimer mon compte & données cloud</button>}
         </div>
       </section> 
 
-      <div className="text-center pb-10"> 
-        <p className="text-[7px] text-slate-200 font-black uppercase tracking-[0.5em]">ZenBudget — 2026 Edition</p> 
-      </div> 
+      <div className="text-center pb-10"><p className="text-[7px] text-slate-200 font-black uppercase tracking-[0.5em]">ZenBudget — 2026 Edition</p></div> 
     </div> 
   ); 
 }; 

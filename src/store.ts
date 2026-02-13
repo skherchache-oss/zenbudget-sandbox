@@ -5,14 +5,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const STORAGE_KEY = 'zenbudget_state_v3';
 
-/**
- * Génère un ID unique pour les transactions ou les comptes
- */
 export const generateId = () => Math.random().toString(36).substring(2, 11);
 
-/**
- * Vérifie si le LocalStorage est disponible
- */
 const isStorageAvailable = () => {
   try {
     const x = '__storage_test__';
@@ -22,9 +16,6 @@ const isStorageAvailable = () => {
   } catch (e) { return false; }
 };
 
-/**
- * Crée un compte par défaut vierge
- */
 export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAccount => ({
   id: generateId(),
   name: 'Personnel',
@@ -39,10 +30,6 @@ export const createDefaultAccount = (ownerId: string = 'local-user'): BudgetAcco
   cycleEndDay: 28,
 });
 
-/**
- * LOGIQUE DE MIGRATION & FUSION
- * Nettoie les données pour éviter les crashs et élimine les doublons
- */
 const migrateData = (parsed: any, defaultState: AppState): AppState => {
   // 1. Fusion des catégories (sans doublons)
   const savedCategories: Category[] = parsed.categories || [];
@@ -56,9 +43,7 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
   // 2. Nettoyage et fusion des comptes
   const rawAccounts = Array.isArray(parsed.accounts) ? parsed.accounts : defaultState.accounts;
   const accounts = rawAccounts.map((acc: any) => {
-    // --- PROTECTION ANTI-DOUBLONS TRANSACTIONS ---
     const rawTransactions: Transaction[] = acc.transactions || [];
-    // On utilise une Map pour garantir que chaque ID de transaction est unique
     const uniqueTxMap = new Map();
     rawTransactions.forEach(tx => {
       if (tx.id) uniqueTxMap.set(tx.id, tx);
@@ -77,7 +62,6 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
     };
   });
 
-  // 3. Reconstruction de l'état final
   return { 
     ...defaultState, 
     ...parsed, 
@@ -91,9 +75,6 @@ const migrateData = (parsed: any, defaultState: AppState): AppState => {
   };
 };
 
-/**
- * INITIALISATION LOCALE
- */
 export const getInitialState = (): AppState => {
   const defaultUser: User = { id: 'local-user', email: 'local@zenbudget.app', name: 'Utilisateur Zen' };
   const defaultAcc = createDefaultAccount('local-user');
@@ -120,9 +101,6 @@ export const getInitialState = (): AppState => {
   }
 };
 
-/**
- * SAUVEGARDE LOCALE
- */
 export const saveState = (state: AppState) => {
   if (!isStorageAvailable()) return;
   try {
@@ -133,13 +111,8 @@ export const saveState = (state: AppState) => {
   }
 };
 
-/**
- * --- FONCTIONS CLOUD FIRESTORE ---
- */
-
 export const fetchUserData = async (firebaseUser: { uid: string, email: string | null, displayName: string | null, photoURL?: string | null }): Promise<AppState> => {
   const userDocRef = doc(db, 'users', firebaseUser.uid);
-  
   const currentUser: User = { 
     id: firebaseUser.uid, 
     email: firebaseUser.email || '', 
@@ -167,13 +140,11 @@ export const fetchUserData = async (firebaseUser: { uid: string, email: string |
         ...acc,
         ownerId: firebaseUser.uid
       }));
-
       const stateToUpload: AppState = { 
         ...localState, 
         user: currentUser, 
         accounts: migratedAccounts 
       };
-
       await setDoc(userDocRef, stateToUpload);
       return stateToUpload;
     }
