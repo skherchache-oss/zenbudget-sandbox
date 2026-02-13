@@ -16,7 +16,8 @@ interface SettingsProps {
   onLogin: () => void; 
   onLogout: () => void; 
   onShowWelcome: () => void; 
-  onBackup: () => void;
+  // Modification ici : on Backup accepte maintenant optionnellement un nom de compte
+  onBackup: (accountName?: string) => void;
   onImport: (file: File) => void;
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
@@ -447,7 +448,11 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
       <section>
         <SectionTitle title="Sauvegarde" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
-          <button onClick={onBackup} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 border-b border-slate-50">
+          {/* Modification de l'appel ici : on passe le nom du compte actif */}
+          <button 
+            onClick={() => onBackup(activeAccount?.name)} 
+            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 border-b border-slate-50"
+          >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px]">💾</div>
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Exporter backup</span>

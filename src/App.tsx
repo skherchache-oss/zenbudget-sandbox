@@ -411,7 +411,19 @@ const App: React.FC = () => {
                   }}
                   onUpdateCategories={(cats) => setState(prev => ({ ...prev, categories: cats }))} 
                   onUpdateBudget={()=>{}} onLogin={loginWithGoogle} onLogout={logout} onShowWelcome={() => setShowWelcome(true)}
-                  onBackup={() => { const dataStr = JSON.stringify(state); const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr); const link = document.createElement('a'); link.setAttribute('href', dataUri); link.setAttribute('download', 'zenbudget_backup.json'); link.click(); }} 
+                  onBackup={() => { 
+                    const dataStr = JSON.stringify(state); 
+                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr); 
+                    
+                    // Logic for dynamic file naming based on active account or user name
+                    const accountName = activeAccount?.name || state.user.name || 'mon';
+                    const fileName = `zenbudget_${accountName.toLowerCase().replace(/\s+/g, '_')}_backup.json`;
+                    
+                    const link = document.createElement('a'); 
+                    link.setAttribute('href', dataUri); 
+                    link.setAttribute('download', fileName); 
+                    link.click(); 
+                  }} 
                   onImport={(file) => { 
                     const reader = new FileReader(); 
                     reader.onload = async (e) => { 
@@ -437,8 +449,8 @@ const App: React.FC = () => {
         <nav className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 grid grid-cols-4 items-center pt-3 pb-8 px-2 z-40">
           <NavBtn active={activeView === 'DASHBOARD'} onClick={() => handleViewChange('DASHBOARD')} icon={<IconHome />} label="Board" fullLabel="Board" />
           <NavBtn active={activeView === 'TRANSACTIONS'} onClick={() => handleViewChange('TRANSACTIONS')} icon={<IconCalendar />} label="Journal" fullLabel="Journal" />
-          <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING')} icon={<IconPlus className="rotate-45" />} label="Fixes" fullLabel="Charges fixes" />
-          <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS')} icon={<IconSettings />} label="Param." fullLabel="Paramètres" />
+          <NavBtn active={activeView === 'RECURRING'} onClick={() => handleViewChange('RECURRING'} icon={<IconPlus className="rotate-45" />} label="Fixes" fullLabel="Charges fixes" />
+          <NavBtn active={activeView === 'SETTINGS'} onClick={() => handleViewChange('SETTINGS'} icon={<IconSettings />} label="Param." fullLabel="Paramètres" />
         </nav>
 
         {showAddModal && <AddTransactionModal categories={state.categories} onClose={() => { setShowAddModal(false); setEditingTransaction(null); }} onAdd={handleUpsertTransaction} initialDate={modalInitialDate} editItem={editingTransaction} />}
