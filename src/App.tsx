@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AppState, ViewType, Transaction } from './types';
 import { getInitialState, saveState, generateId, fetchUserData, saveUserData } from './store';
 import { MONTHS_FR } from './constants';
-import { IconPlus, IconHome, IconCalendar, IconLogo, IconSettings } from './components/Icons';
+import { IconPlus, IconHome, IconCalendar, IconSettings } from './components/Icons';
 
 // Firebase & Auth
 import { auth, loginWithGoogle, logout, db } from './firebase'; 
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 // Framer Motion
 import { motion, AnimatePresence } from 'framer-motion';
@@ -281,7 +281,6 @@ const App: React.FC = () => {
 
   const headerPhoto = (fbUser && localStorage.getItem(`user_photo_hd_${fbUser.uid}`)) || state.user.photoURL;
 
-  // --- ÉCRAN DE CHARGEMENT ACTUALISÉ (Ligne 169) ---
   if (authLoading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-950 gap-4">
       <div className="relative">
@@ -308,7 +307,6 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex justify-center overflow-hidden font-sans bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
       <div className="w-full max-w-[768px] bg-[#F8F9FD] flex flex-col h-screen relative shadow-[0_0_80px_rgba(0,0,0,0.6)] border-x border-white/5">
         
-        {/* HEADER ACTUALISÉ */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-4 shrink-0 z-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -324,7 +322,7 @@ const App: React.FC = () => {
             
             <div className="flex items-center gap-4">
               <div 
-                onClick={() => setActiveView('SETTINGS')} 
+                onClick={() => handleViewChange('SETTINGS')} 
                 className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden cursor-pointer active:scale-90 transition-transform bg-slate-50 flex items-center justify-center"
               >
                 {headerPhoto ? (
