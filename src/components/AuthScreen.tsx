@@ -65,17 +65,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLocalMode }) => {
   };
 
   return (
-    /* Fond noir sur desktop (lg), blanc sur mobile */
+    // Fond noir sur desktop (lg), blanc sur mobile
     <div className="h-screen w-full flex items-center justify-center bg-white lg:bg-slate-950 font-sans overflow-hidden">
       
       {/* Container Format Tablette sur Desktop, Full sur Mobile */}
       <div className="w-full max-w-[480px] h-full lg:h-auto lg:max-h-[95vh] bg-white lg:rounded-[50px] flex flex-col items-center justify-between p-8 sm:p-12 shadow-2xl">
         
-        {/* Header / Logo */}
+        {/* Header / Logo - Mis à jour pour être identique à App.tsx */}
         <div className="w-full flex flex-col items-center shrink-0">
-          <div className="w-16 h-16 bg-slate-900 rounded-[22px] shadow-lg flex items-center justify-center mb-4 transform -rotate-3 shrink-0">
-            {/* Utilisation du nouveau IconLogo */}
-            <IconLogo className="w-10 h-10 text-white" />
+          <div className="relative mb-4">
+            <img 
+              src="/ZB-logo-192.png" 
+              alt="ZenBudget" 
+              className="w-16 h-16 rounded-[22px] shadow-lg border border-slate-200"
+            />
           </div>
           <div className="text-center">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 leading-none mb-1">
