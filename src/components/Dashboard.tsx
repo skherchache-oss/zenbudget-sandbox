@@ -53,6 +53,18 @@ const Dashboard: React.FC<DashboardProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const currentDate = useMemo(() => new Date(year, month), [year, month]);
 
+  // --- EFFET POUR LE MODE FOCUS (SCROLL LOCK) ---
+  useEffect(() => {
+    if (premiumType || showFeedbackModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [premiumType, showFeedbackModal]);
+
   const handleFullAppRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => { window.location.reload(); }, 500);
@@ -165,18 +177,16 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* MODALE PREMIUM - CORRIGÉ AVEC FIXED ET Z-INDEX */}
+      {/* MODALE PREMIUM */}
       <AnimatePresence>
         {premiumType && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
-            {/* Overlay - Utilise fixed pour couvrir tout l'écran */}
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-slate-900/60 backdrop-blur-md pointer-events-auto"
               onClick={() => setPremiumType(null)}
             />
             
-            {/* Boîte Modale - Centrée via flex du parent fixed */}
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 20 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
@@ -213,7 +223,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL FEEDBACK - CORRIGÉ AVEC FIXED ET Z-INDEX */}
+      {/* MODAL FEEDBACK */}
       <AnimatePresence>
         {showFeedbackModal && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
@@ -309,7 +319,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* BOUTON EXPORT CSV */}
         <button onClick={() => setPremiumType('CSV')} className="flex flex-col items-center gap-1 group">
           <div className="relative w-10 h-10 bg-white border border-slate-100 rounded-xl shadow-sm text-slate-400 group-hover:text-indigo-600 flex items-center justify-center transition-all active:scale-90">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
