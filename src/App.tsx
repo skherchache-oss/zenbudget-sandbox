@@ -6,8 +6,8 @@ import { IconPlus, IconHome, IconCalendar, IconSettings } from './components/Ico
 
 // Firebase & Auth
 import { auth, loginWithGoogle, logout, db } from './firebase'; 
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User as FirebaseUser, deleteUser } from 'firebase/auth';
+import { doc, setDoc, deleteDoc, addDoc, collection } from 'firebase/firestore';
 
 // Framer Motion
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,6 +35,9 @@ const App: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<number | null>(new Date().getDate());
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewDirection, setViewDirection] = useState(0);
+  
+  // État pour le message de remerciement
+  const [showToast, setShowToast] = useState(false);
 
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
@@ -279,7 +282,32 @@ const App: React.FC = () => {
     }
   };
 
-  const headerPhoto = (fbUser && localStorage.getItem(`user_photo_hd_${fbUser.uid}`)) || state.user.photoURL;
+  const handleFeedbackCapture = async (data: any) => {
+    setState(prev => ({ 
+      ...prev, 
+      hasGivenFeedback: true,
+      feedbackData: data
+    }));
+
+    if (fbUser && fbUser.uid !== 'local-user') {
+      try {
+        await addDoc(collection(db, "all_feedbacks"), {
+          userId: fbUser.uid,
+          userEmail: fbUser.email,
+          userName: fbUser.displayName,
+          ...data,
+          submittedAt: new Date().toISOString()
+        });
+        
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } catch (e) {
+        console.error("Erreur feedback global:", e);
+      }
+    }
+  };
+
+  const headerPhoto = (fbUser && fbUser.uid !== 'local-user' && localStorage.getItem(`user_photo_hd_${fbUser.uid}`)) || state.user?.photoURL;
 
   if (authLoading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-950 gap-4">
@@ -462,8 +490,20 @@ const App: React.FC = () => {
         
         <AnimatePresence>
           {showWelcome && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowWelcome(false)}>
-              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-white rounded-[32px] w-full max-w-lg p-5 sm:p-8 shadow-2xl overflow-y-auto max-h-[95vh] no-scrollbar" onClick={e => e.stopPropagation()}>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" 
+              onClick={() => setShowWelcome(false)}
+            >
+              <motion.div 
+                initial={{ y: 50, opacity: 0 }} 
+                animate={{ y: 0, opacity: 1 }} 
+                exit={{ y: 50, opacity: 0 }} 
+                className="bg-white rounded-[32px] w-full max-w-lg p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar relative" 
+                onClick={e => e.stopPropagation()}
+              >
                 <div className="flex justify-center text-4xl mb-2">🌿</div>
                 <h2 className="text-xl font-black text-center italic text-slate-800 tracking-tight mb-4">Bienvenue sur ZenBudget</h2>
                 
@@ -500,10 +540,29 @@ const App: React.FC = () => {
                    </div>
                 </div>
 
-                <button onClick={() => setShowWelcome(false)} className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all mt-6">
+                <button 
+                  onClick={() => setShowWelcome(false)} 
+                  className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all mt-6"
+                >
                   Démarrer l'expérience
                 </button>
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showToast && (
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }} 
+              animate={{ y: -40, opacity: 1 }} 
+              exit={{ y: 100, opacity: 0 }}
+              className="fixed bottom-0 left-0 right-0 flex justify-center z-[250] pointer-events-none px-6"
+            >
+              <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
+                <span className="text-xl">🙏</span>
+                <span className="text-sm font-bold tracking-tight">Merci pour votre retour !</span>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
