@@ -165,35 +165,40 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* MODALE PREMIUM - CORRECTION CENTRAGE ABSOLU */}
+      {/* MODALE PREMIUM - CORRIGÉ AVEC FIXED ET Z-INDEX */}
       <AnimatePresence>
         {premiumType && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
-            {/* Overlay */}
+            {/* Overlay - Utilise fixed pour couvrir tout l'écran */}
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md pointer-events-auto"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md pointer-events-auto"
               onClick={() => setPremiumType(null)}
             />
             
-            {/* Boîte Modale */}
+            {/* Boîte Modale - Centrée via flex du parent fixed */}
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 20 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="bg-white rounded-[40px] p-8 w-[90%] max-w-sm shadow-2xl text-center relative pointer-events-auto z-[1001]"
+              onClick={e => e.stopPropagation()}
             >
               <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
               
               {premiumType === 'CSV' ? (
                 <>
-                  <h3 className="text-xl font-black text-slate-900 mb-2">Export CSV</h3>
-                  <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">L'exportation de vos rapports vers Excel sera disponible prochainement dans ZenBudget Premium.</p>
+                  <h3 className="text-xl font-black text-slate-900 mb-2 italic">Export CSV</h3>
+                  <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                    L'exportation de vos rapports vers Excel sera disponible prochainement dans ZenBudget Premium.
+                  </p>
                 </>
               ) : (
                 <>
-                  <h3 className="text-xl font-black text-slate-900 mb-2">Projets Zen</h3>
-                  <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">La création de projets (vacances, épargne, achat) arrive bientôt pour vous aider à atteindre vos objectifs.</p>
+                  <h3 className="text-xl font-black text-slate-900 mb-2 italic">Projets Zen</h3>
+                  <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                    La création de projets (vacances, épargne, achat) arrive bientôt pour vous aider à atteindre vos objectifs.
+                  </p>
                 </>
               )}
 
@@ -208,17 +213,19 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL FEEDBACK - MÊME CORRECTION DE CENTRAGE */}
+      {/* MODAL FEEDBACK - CORRIGÉ AVEC FIXED ET Z-INDEX */}
       <AnimatePresence>
         {showFeedbackModal && (
-          <div className="fixed inset-0 z-[999] flex items-center justify-center pointer-events-none">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-indigo-950/20 backdrop-blur-xl pointer-events-auto"
+              className="fixed inset-0 bg-indigo-950/20 backdrop-blur-xl pointer-events-auto"
+              onClick={() => setShowFeedbackModal(false)}
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="bg-white rounded-[40px] p-8 w-[90%] max-w-sm shadow-2xl relative overflow-hidden pointer-events-auto z-[1001]"
+              onClick={e => e.stopPropagation()}
             >
               <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500 transition-colors">
                 <X className="w-5 h-5" />
