@@ -42,13 +42,6 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
 
-  // --- NOUVEAU : AUTO-SCROLL TOP QUAND POPUP S'OUVRE ---
-  useEffect(() => {
-    if (showWelcome) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [showWelcome]);
-
   // --- LOGIQUE DE CHANGEMENT DE MOIS ---
   const changeMonth = (offset: number) => {
     setSlideDirection(offset > 0 ? 'next' : 'prev');
@@ -495,20 +488,22 @@ const App: React.FC = () => {
           />
         )}
         
+        {/* NOUVELLE POPUP WELCOME : Positionnement Fixe Absolu par rapport au viewport */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
-              className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" 
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}
+              className="bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4" 
               onClick={() => setShowWelcome(false)}
             >
               <motion.div 
-                initial={{ y: 50, opacity: 0 }} 
-                animate={{ y: 0, opacity: 1 }} 
-                exit={{ y: 50, opacity: 0 }} 
-                className="bg-white rounded-[32px] w-full max-w-lg p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar relative" 
+                initial={{ scale: 0.9, opacity: 0 }} 
+                animate={{ scale: 1, opacity: 1 }} 
+                exit={{ scale: 0.9, opacity: 0 }} 
+                className="bg-white rounded-[32px] w-full max-w-sm p-6 shadow-2xl overflow-y-auto max-h-[85vh] no-scrollbar relative" 
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex justify-center text-4xl mb-2">🌿</div>
@@ -539,12 +534,6 @@ const App: React.FC = () => {
                         Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
                       </p>
                    </div>
-                   <div className="flex gap-3 px-1 items-start border-t border-slate-50 pt-2">
-                      <span className="font-black text-indigo-600">4.</span>
-                      <p className="text-[11px] font-medium text-slate-400 italic leading-tight">
-                        <span className="font-bold">Sauvegarde</span> : Export Backup (Paramètres) pour restaurer. Export CSV (Board) pour Excel.
-                      </p>
-                   </div>
                 </div>
 
                 <button 
@@ -562,9 +551,9 @@ const App: React.FC = () => {
           {showToast && (
             <motion.div 
               initial={{ y: 100, opacity: 0 }} 
-              animate={{ y: -40, opacity: 1 }} 
+              animate={{ y: -100, opacity: 1 }} 
               exit={{ y: 100, opacity: 0 }}
-              className="fixed bottom-0 left-0 right-0 flex justify-center z-[250] pointer-events-none px-6"
+              className="fixed bottom-0 left-0 right-0 flex justify-center z-[9999] pointer-events-none px-6"
             >
               <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
                 <span className="text-xl">🙏</span>
