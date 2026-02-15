@@ -42,6 +42,13 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const isImporting = useRef(false);
 
+  // --- NOUVEAU : AUTO-SCROLL TOP QUAND POPUP S'OUVRE ---
+  useEffect(() => {
+    if (showWelcome) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [showWelcome]);
+
   // --- LOGIQUE DE CHANGEMENT DE MOIS ---
   const changeMonth = (offset: number) => {
     setSlideDirection(offset > 0 ? 'next' : 'prev');
