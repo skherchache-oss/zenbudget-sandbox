@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Transaction, Category, BudgetAccount, Project } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { format, differenceInDays } from 'date-fns';
-import { fr } from 'date-fns,locale';
+import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, RefreshCw, AlertCircle, MessageSquareHeart, Target, Plus, Pencil, Trash2, Trophy, Star, Send, X } from 'lucide-react';
 import { MONTHS_FR } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,11 +53,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const currentDate = useMemo(() => new Date(year, month), [year, month]);
 
-  // --- FOCUS MODE & SCROLL LOCK ---
+  // GESTION DU FOCUS ET DU SCROLL BODY
   useEffect(() => {
     const isModalOpen = !!premiumType || showFeedbackModal;
     if (isModalOpen) {
-      // Bloque le scroll sur le body et l'élément HTML pour mobile
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
@@ -185,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* MODALE PREMIUM - CORRECTION CENTRAGE & FLOU */}
+      {/* MODALE PREMIUM */}
       <AnimatePresence>
         {premiumType && (
           <div className="fixed inset-0 flex items-center justify-center p-4 z-[99999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -223,7 +222,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL FEEDBACK - CORRECTION CENTRAGE & FLOU */}
+      {/* MODAL FEEDBACK */}
       <AnimatePresence>
         {showFeedbackModal && (
           <div className="fixed inset-0 flex items-center justify-center p-4 z-[99999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -255,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex justify-center gap-2 mb-8">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button key={star} onClick={() => setUserRating(star)}
-                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white' : 'bg-slate-50 text-slate-300'}`}
+                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}
                         >
                           <Star className={`w-5 h-5 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
                         </button>
