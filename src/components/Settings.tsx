@@ -22,7 +22,6 @@ interface SettingsProps {
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
 } 
 
-// --- LISTE D'ICÔNES ENRICHIE (Bébé, Enfants, Loisirs...) ---
 const EMOJI_LIST = [
   '💰', '🛒', '🚗', '🏠', '🍕', '🎮', '🏥', '🔌', '🎁', '✈️', 
   '👕', '🎓', '🛡️', '🍿', '🏋️', '📱', '🐕', '🌿', '🛠️', '💼',
@@ -97,7 +96,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
   const [isEditingUserName, setIsEditingUserName] = useState(false);
   const [tempUserName, setTempUserName] = useState(user?.displayName || '');
   
-  // États pour les catégories
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', icon: '👶', color: '#6366f1' });
 
@@ -378,12 +376,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* GESTION CATÉGORIES AMÉLIORÉE */}
+      {/* GESTION CATÉGORIES AMÉLIORÉE (LISTE DÉROULANTE/COMPACTE) */}
       <section>
         <SectionTitle title="Mes Catégories" />
         <div className="bg-white rounded-[32px] border border-slate-100 p-5 shadow-sm space-y-5">
           
-          <div className="grid grid-cols-2 gap-2">
+          {/* Liste compacte avec scrollbar si trop longue */}
+          <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 no-scrollbar">
             {state.categories.map(cat => (
               <div key={cat.id} className="group flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 transition-all">
                 <div className="flex items-center gap-2 min-w-0">
@@ -473,17 +472,17 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* --- NOUVELLE SECTION : A PROPOS & LÉGAL --- */}
+      {/* --- SECTION : A PROPOS & LÉGAL (CORRIGÉE ALIGNEMENT GAUCHE) --- */}
       <section>
         <SectionTitle title="À propos & Légal" />
         <div className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm">
           {/* Version / Info */}
           <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+             <div className="flex items-center gap-3 w-full">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
                   <Info size={16} />
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col text-left">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">ZenBudget App</span>
                   <span className="text-[8px] font-bold text-slate-400">Version 1.0.0 (Bêta)</span>
                 </div>
@@ -495,13 +494,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')}
             className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
           >
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+             <div className="flex items-center gap-3 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                   <ShieldCheck size={16} />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Politique de Confidentialité (RGPD)</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 text-left">Politique de Confidentialité (RGPD)</span>
              </div>
-             <FileText size={12} className="text-slate-300" />
+             <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
           </button>
 
           {/* CGU */}
@@ -509,13 +508,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             onClick={() => window.open('https://tonsite.com/cgu', '_blank')}
             className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
           >
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+             <div className="flex items-center gap-3 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                   <Scale size={16} />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Conditions Générales d'Utilisation</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 text-left">Conditions Générales d'Utilisation</span>
              </div>
-             <FileText size={12} className="text-slate-300" />
+             <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
           </button>
 
           {/* Mentions Légales */}
@@ -523,13 +522,13 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')}
             className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
           >
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600">
+             <div className="flex items-center gap-3 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Mentions Légales</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 text-left">Mentions Légales</span>
              </div>
-             <FileText size={12} className="text-slate-300" />
+             <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
           </button>
         </div>
       </section>
