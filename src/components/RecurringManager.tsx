@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { RecurringTemplate, TransactionType, Category } from '../types';
 import { generateId } from '../store';
 import { IconPlus } from './Icons';
+import { ArrowUpCircle, PieChart } from 'lucide-react';
 
 interface RecurringManagerProps {
   recurringTemplates: RecurringTemplate[];
@@ -169,35 +170,42 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
-      <div className="bg-white rounded-[40px] p-6 shadow-sm border border-slate-100 mb-2">
-        {/* Résumé des revenus - Icône changée pour éviter la confusion avec un bouton */}
-        <div className="flex justify-between items-center px-5 py-4 bg-emerald-50/60 rounded-[24px] mb-6 border border-emerald-100/50">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-[0.1em]">Revenus récurrents</span>
-            <span className="text-lg font-black text-emerald-700">+{totalIncomes.toLocaleString('fr-FR')}€</span>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-emerald-500 shadow-sm">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
+      {/* --- BLOC 1 : REVENUS RÉCURRENTS (SÉPARÉ) --- */}
+      <div className="bg-emerald-500 p-8 rounded-[40px] shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+        <div className="flex items-center gap-3 mb-2">
+          <ArrowUpCircle className="text-emerald-200 w-5 h-5" />
+          <span className="text-[10px] font-black text-emerald-100 uppercase tracking-[0.2em]">Revenus fixes</span>
+        </div>
+        <div className="text-4xl font-black text-white">+{totalIncomes.toLocaleString('fr-FR')}€</div>
+      </div>
+
+      {/* --- BLOC 2 : RÉPARTITION DES CHARGES (AVEC GRAPHIQUE) --- */}
+      <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100">
+        <div className="flex items-center gap-2 mb-8">
+          <PieChart className="text-indigo-500 w-4 h-4" />
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Répartition des charges</h3>
         </div>
 
         <div className="flex flex-col items-center">
           <RecurringPieChart data={expenseChartData} total={totalExpenses} />
           
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-8">
-            {expenseChartData.slice(0, 4).map((cat, i) => (
-              <div key={i} className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">{cat.name}</span>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-10">
+            {expenseChartData.slice(0, 6).map((cat, i) => (
+              <div key={i} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100/50">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">{cat.name}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* --- LISTE DES FLUX --- */}
       <div className="space-y-2">
+        <div className="px-2 mb-3">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Détails des programmations</h3>
+        </div>
         {recurringTemplates.map(tpl => (
           <RecurringItem 
             key={tpl.id} tpl={tpl} category={categories.find(c => c.id === tpl.categoryId)} 
