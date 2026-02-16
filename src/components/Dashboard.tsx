@@ -53,16 +53,19 @@ const Dashboard: React.FC<DashboardProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const currentDate = useMemo(() => new Date(year, month), [year, month]);
 
-  // --- EFFET POUR LE MODE FOCUS (SCROLL LOCK) ---
+  // FOCUS MODE : Bloque le scroll et gère la barre d'adresse mobile
   useEffect(() => {
     if (premiumType || showFeedbackModal) {
-      document.body.style.overflow = 'hidden';
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = 'unset';
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      window.scrollTo(0, parseInt(scrollY || '0') * -1);
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [premiumType, showFeedbackModal]);
 
   const handleFullAppRefresh = () => {
@@ -177,21 +180,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* MODALE PREMIUM */}
+      {/* MODALE PREMIUM - CENTRAGE ABSOLU MOBILE */}
       <AnimatePresence>
         {premiumType && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 touch-none">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md pointer-events-auto"
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md pointer-events-auto"
               onClick={() => setPremiumType(null)}
             />
             
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
-              animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-[40px] p-8 w-[90%] max-w-sm shadow-2xl text-center relative pointer-events-auto z-[1001]"
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl text-center relative pointer-events-auto z-[10000]"
               onClick={e => e.stopPropagation()}
             >
               <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
@@ -223,18 +226,18 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL FEEDBACK */}
+      {/* MODAL FEEDBACK - CENTRAGE ABSOLU MOBILE */}
       <AnimatePresence>
         {showFeedbackModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 touch-none">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-indigo-950/20 backdrop-blur-xl pointer-events-auto"
+              className="absolute inset-0 bg-indigo-950/40 backdrop-blur-xl pointer-events-auto"
               onClick={() => setShowFeedbackModal(false)}
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-[40px] p-8 w-[90%] max-w-sm shadow-2xl relative overflow-hidden pointer-events-auto z-[1001]"
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl relative overflow-hidden pointer-events-auto z-[10000]"
               onClick={e => e.stopPropagation()}
             >
               <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500 transition-colors">
@@ -250,12 +253,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-2 italic">L'app vous plaît ?</h3>
                     <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">Votre avis nous aide à garder ZenBudget gratuit et serein.</p>
-                    <div className="flex justify-center gap-3 mb-8">
+                    <div className="flex justify-center gap-2 mb-8">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button key={star} onClick={() => setUserRating(star)}
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg shadow-amber-100 scale-110' : 'bg-slate-50 text-slate-300'}`}
+                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg shadow-amber-100 scale-110' : 'bg-slate-50 text-slate-300'}`}
                         >
-                          <Star className={`w-6 h-6 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
+                          <Star className={`w-5 h-5 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
                         </button>
                       ))}
                     </div>
