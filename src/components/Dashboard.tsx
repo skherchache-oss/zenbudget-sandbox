@@ -53,19 +53,19 @@ const Dashboard: React.FC<DashboardProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const currentDate = useMemo(() => new Date(year, month), [year, month]);
 
-  // FOCUS MODE : Bloque le scroll et gère la barre d'adresse mobile
+  // FOCUS MODE : Gestion du scroll body
   useEffect(() => {
     if (premiumType || showFeedbackModal) {
-      const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
     } else {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      document.body.style.overflow = 'unset';
+      document.body.style.touchAction = 'auto';
     }
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.touchAction = 'auto';
+    };
   }, [premiumType, showFeedbackModal]);
 
   const handleFullAppRefresh = () => {
@@ -180,44 +180,33 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* MODALE PREMIUM - CENTRAGE ABSOLU MOBILE */}
+      {/* MODALE PREMIUM - CENTRAGE FORCE */}
       <AnimatePresence>
         {premiumType && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 touch-none">
+          <div className="fixed top-0 left-0 w-screen h-[100dvh] flex items-center justify-center z-[99999] px-4 overflow-hidden">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md pointer-events-auto"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setPremiumType(null)}
             />
             
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl text-center relative pointer-events-auto z-[10000]"
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center relative z-10"
               onClick={e => e.stopPropagation()}
             >
               <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
-              
-              {premiumType === 'CSV' ? (
-                <>
-                  <h3 className="text-xl font-black text-slate-900 mb-2 italic">Export CSV</h3>
-                  <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
-                    L'exportation de vos rapports vers Excel sera disponible prochainement dans ZenBudget Premium.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-xl font-black text-slate-900 mb-2 italic">Projets Zen</h3>
-                  <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
-                    La création de projets (vacances, épargne, achat) arrive bientôt pour vous aider à atteindre vos objectifs.
-                  </p>
-                </>
-              )}
-
+              <h3 className="text-xl font-black text-slate-900 mb-2 italic">
+                {premiumType === 'CSV' ? 'Export CSV' : 'Projets Zen'}
+              </h3>
+              <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                {premiumType === 'CSV' 
+                  ? "L'exportation de vos rapports vers Excel sera disponible prochainement." 
+                  : "La création de projets (vacances, épargne) arrive bientôt pour vous aider."}
+              </p>
               <button 
                 onClick={() => { setPremiumType(null); setShowFeedbackModal(true); }} 
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100 active:scale-95 transition-all"
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all"
               >
                 D'accord ✨
               </button>
@@ -226,21 +215,21 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL FEEDBACK - CENTRAGE ABSOLU MOBILE */}
+      {/* MODAL FEEDBACK - CENTRAGE FORCE */}
       <AnimatePresence>
         {showFeedbackModal && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 touch-none">
+          <div className="fixed top-0 left-0 w-screen h-[100dvh] flex items-center justify-center z-[99999] px-4 overflow-hidden">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-indigo-950/40 backdrop-blur-xl pointer-events-auto"
+              className="absolute inset-0 bg-indigo-950/20 backdrop-blur-xl"
               onClick={() => setShowFeedbackModal(false)}
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl relative overflow-hidden pointer-events-auto z-[10000]"
+              className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl relative z-10"
               onClick={e => e.stopPropagation()}
             >
-              <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500 transition-colors">
+              <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500">
                 <X className="w-5 h-5" />
               </button>
 
@@ -252,26 +241,26 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {feedbackStep === 'RATING' ? (
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-2 italic">L'app vous plaît ?</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">Votre avis nous aide à garder ZenBudget gratuit et serein.</p>
+                    <p className="text-sm text-slate-500 font-medium mb-8">Votre avis nous aide à rester gratuit.</p>
                     <div className="flex justify-center gap-2 mb-8">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button key={star} onClick={() => setUserRating(star)}
-                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg shadow-amber-100 scale-110' : 'bg-slate-50 text-slate-300'}`}
+                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}
                         >
                           <Star className={`w-5 h-5 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
                         </button>
                       ))}
                     </div>
                     <button disabled={!userRating} onClick={() => setFeedbackStep('FEATURES')}
-                      className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest disabled:opacity-30 transition-all shadow-xl"
+                      className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest disabled:opacity-30 shadow-xl"
                     >Suivant</button>
                   </>
                 ) : (
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-2 italic">ZenBudget Premium</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">Quelles fonctionnalités aimeriez-vous voir en priorité ?</p>
+                    <p className="text-sm text-slate-500 font-medium mb-6">Quelles fonctions voulez-vous ?</p>
                     <div className="grid grid-cols-1 gap-2 mb-8">
-                      {[{ id: 'projects', label: 'Multi-projets & Épargne', icon: '🎯' }, { id: 'csv', label: 'Export Excel / CSV', icon: '📊' }, { id: 'ai', label: 'Conseils IA personnalisés', icon: '🤖' }, { id: 'multi', label: 'Plusieurs comptes bancaires', icon: '💳' }].map((feat) => (
+                      {[{ id: 'projects', label: 'Multi-projets & Épargne', icon: '🎯' }, { id: 'csv', label: 'Export Excel / CSV', icon: '📊' }, { id: 'ai', label: 'Conseils IA personnalisés', icon: '🤖' }].map((feat) => (
                         <button key={feat.id} onClick={() => toggleFeature(feat.id)}
                           className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
                         >
@@ -280,8 +269,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                         </button>
                       ))}
                     </div>
-                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 active:scale-95 transition-all"
-                    >Envoyer mes réponses <Send className="w-3 h-3" /></button>
+                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                    >Envoyer <Send className="w-3 h-3" /></button>
                   </>
                 )}
               </div>
