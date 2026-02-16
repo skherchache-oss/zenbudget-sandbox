@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Transaction, Category, BudgetAccount, Project } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { format, differenceInDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr } from 'date-fns,locale';
 import { ChevronLeft, ChevronRight, RefreshCw, AlertCircle, MessageSquareHeart, Target, Plus, Pencil, Trash2, Trophy, Star, Send, X } from 'lucide-react';
 import { MONTHS_FR } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,18 +53,23 @@ const Dashboard: React.FC<DashboardProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const currentDate = useMemo(() => new Date(year, month), [year, month]);
 
-  // FOCUS MODE : Gestion du scroll body
+  // --- FOCUS MODE & SCROLL LOCK ---
   useEffect(() => {
-    if (premiumType || showFeedbackModal) {
+    const isModalOpen = !!premiumType || showFeedbackModal;
+    if (isModalOpen) {
+      // Bloque le scroll sur le body et l'élément HTML pour mobile
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
     } else {
-      document.body.style.overflow = 'unset';
-      document.body.style.touchAction = 'auto';
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
     }
     return () => {
-      document.body.style.overflow = 'unset';
-      document.body.style.touchAction = 'auto';
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
     };
   }, [premiumType, showFeedbackModal]);
 
@@ -180,19 +185,22 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6 overflow-y-auto no-scrollbar pb-32 px-1 fade-in">
       
-      {/* MODALE PREMIUM - CENTRAGE FORCE */}
+      {/* MODALE PREMIUM - CORRECTION CENTRAGE & FLOU */}
       <AnimatePresence>
         {premiumType && (
-          <div className="fixed top-0 left-0 w-screen h-[100dvh] flex items-center justify-center z-[99999] px-4 overflow-hidden">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-[99999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
               onClick={() => setPremiumType(null)}
             />
             
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center relative z-10"
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl text-center relative z-10"
               onClick={e => e.stopPropagation()}
             >
               <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
@@ -201,8 +209,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               </h3>
               <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
                 {premiumType === 'CSV' 
-                  ? "L'exportation de vos rapports vers Excel sera disponible prochainement." 
-                  : "La création de projets (vacances, épargne) arrive bientôt pour vous aider."}
+                  ? "L'exportation de vos rapports vers Excel sera bientôt disponible." 
+                  : "Les objectifs d'épargne arrivent bientôt pour vous aider."}
               </p>
               <button 
                 onClick={() => { setPremiumType(null); setShowFeedbackModal(true); }} 
@@ -215,18 +223,20 @@ const Dashboard: React.FC<DashboardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* MODAL FEEDBACK - CENTRAGE FORCE */}
+      {/* MODAL FEEDBACK - CORRECTION CENTRAGE & FLOU */}
       <AnimatePresence>
         {showFeedbackModal && (
-          <div className="fixed top-0 left-0 w-screen h-[100dvh] flex items-center justify-center z-[99999] px-4 overflow-hidden">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-[99999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-indigo-950/20 backdrop-blur-xl"
+              className="absolute inset-0 bg-indigo-950/30 backdrop-blur-md"
               onClick={() => setShowFeedbackModal(false)}
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl relative z-10"
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl relative z-10 overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500">
@@ -241,11 +251,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {feedbackStep === 'RATING' ? (
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-2 italic">L'app vous plaît ?</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-8">Votre avis nous aide à rester gratuit.</p>
+                    <p className="text-sm text-slate-500 font-medium mb-8">Votre avis nous aide énormément.</p>
                     <div className="flex justify-center gap-2 mb-8">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button key={star} onClick={() => setUserRating(star)}
-                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}
+                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white' : 'bg-slate-50 text-slate-300'}`}
                         >
                           <Star className={`w-5 h-5 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
                         </button>
@@ -258,18 +268,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                 ) : (
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-2 italic">ZenBudget Premium</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-6">Quelles fonctions voulez-vous ?</p>
-                    <div className="grid grid-cols-1 gap-2 mb-8">
-                      {[{ id: 'projects', label: 'Multi-projets & Épargne', icon: '🎯' }, { id: 'csv', label: 'Export Excel / CSV', icon: '📊' }, { id: 'ai', label: 'Conseils IA personnalisés', icon: '🤖' }].map((feat) => (
+                    <div className="grid grid-cols-1 gap-2 mb-8 text-left">
+                      {[{ id: 'projects', label: 'Multi-projets', icon: '🎯' }, { id: 'csv', label: 'Export Excel', icon: '📊' }, { id: 'ai', label: 'Conseils IA', icon: '🤖' }].map((feat) => (
                         <button key={feat.id} onClick={() => toggleFeature(feat.id)}
-                          className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
+                          className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
                         >
                           <span className="text-lg">{feat.icon}</span>
                           <span className={`text-[11px] font-black uppercase ${selectedFeatures.includes(feat.id) ? 'text-indigo-600' : 'text-slate-500'}`}>{feat.label}</span>
                         </button>
                       ))}
                     </div>
-                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
                     >Envoyer <Send className="w-3 h-3" /></button>
                   </>
                 )}
