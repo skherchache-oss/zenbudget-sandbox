@@ -3,6 +3,7 @@ import { AppState, BudgetAccount, Category } from '../types';
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount, generateId } from '../store'; 
 import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
+import { Info, ShieldCheck, FileText, Scale } from 'lucide-react';
 
 interface SettingsProps { 
   state: AppState; 
@@ -468,6 +469,67 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
           <input type="file" ref={fileInputRef} hidden accept=".backup,.json" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
           <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-slate-50">
             <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div><span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Importer backup</span></div>
+          </button>
+        </div>
+      </section>
+
+      {/* --- NOUVELLE SECTION : A PROPOS & LÉGAL --- */}
+      <section>
+        <SectionTitle title="À propos & Légal" />
+        <div className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm">
+          {/* Version / Info */}
+          <div className="p-4 border-b border-slate-50 flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                  <Info size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">ZenBudget App</span>
+                  <span className="text-[8px] font-bold text-slate-400">Version 1.0.0 (Bêta)</span>
+                </div>
+             </div>
+          </div>
+
+          {/* RGPD / Confidentialité */}
+          <button 
+            onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')}
+            className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+             <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <ShieldCheck size={16} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Politique de Confidentialité (RGPD)</span>
+             </div>
+             <FileText size={12} className="text-slate-300" />
+          </button>
+
+          {/* CGU */}
+          <button 
+            onClick={() => window.open('https://tonsite.com/cgu', '_blank')}
+            className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+             <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <Scale size={16} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Conditions Générales d'Utilisation</span>
+             </div>
+             <FileText size={12} className="text-slate-300" />
+          </button>
+
+          {/* Mentions Légales */}
+          <button 
+            onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')}
+            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+          >
+             <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600">
+                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Mentions Légales</span>
+             </div>
+             <FileText size={12} className="text-slate-300" />
           </button>
         </div>
       </section>
