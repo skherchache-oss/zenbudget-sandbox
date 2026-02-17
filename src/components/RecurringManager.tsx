@@ -184,7 +184,10 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         <span className="text-emerald-100 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Revenus fixes mensuels</span>
         <div className="flex items-baseline gap-2">
-          <div className="text-4xl font-black tracking-tighter text-white">+{Math.round(totalIncomes).toLocaleString('fr-FR')}</div>
+          {/* Correction ici : affichage explicite de totalIncomes */}
+          <div className="text-4xl font-black tracking-tighter text-white">
+            +{formatVal(totalIncomes).split(',')[0]}
+          </div>
           <span className="text-xl font-bold text-emerald-200">€</span>
         </div>
       </div>
