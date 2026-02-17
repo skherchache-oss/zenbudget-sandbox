@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { RecurringTemplate, TransactionType, Category } from '../types';
 import { generateId } from '../store';
 import { IconPlus } from './Icons';
-import { ArrowUpCircle, PieChart, ChevronDown, ChevronRight, List } from 'lucide-react';
+import { ArrowUpCircle, PieChart, ChevronDown, ChevronRight, List, Edit3 } from 'lucide-react';
 
 interface RecurringManagerProps {
   recurringTemplates: RecurringTemplate[];
@@ -14,16 +14,14 @@ interface RecurringManagerProps {
   onMonthChange: (offset: number) => void;
 }
 
-// --- COMPOSANT GRAPHIQUE CAMEMBERT ---
+// --- COMPOSANT GRAPHIQUE ---
 const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: string }[], total: number }> = ({ data, total }) => {
   let cumulativePercent = 0;
-
   function getCoordinatesForPercent(percent: number) {
     const x = Math.cos(2 * Math.PI * percent);
     const y = Math.sin(2 * Math.PI * percent);
     return [x, y];
   }
-
   return (
     <div className="relative w-44 h-44 mx-auto flex items-center justify-center">
       <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
@@ -35,11 +33,7 @@ const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: 
             cumulativePercent += slice.value / total;
             const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
             const largeArcFlag = slice.value / total > 0.5 ? 1 : 0;
-            const pathData = [
-              `M ${startX} ${startY}`,
-              `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-              `L 0 0`,
-            ].join(' ');
+            const pathData = [`M ${startX} ${startY}`, `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`, `L 0 0`].join(' ');
             return <path key={i} d={pathData} fill={slice.color} className="transition-all duration-500" />;
           })
         )}
@@ -79,32 +73,48 @@ const RecurringItem: React.FC<{
   };
 
   return (
-    <div className="flex items-center mb-2 bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden relative h-16 transition-all">
+    <div className="flex items-center mb-1.5 bg-slate-50/40 rounded-xl border border-slate-100 overflow-hidden relative h-14 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+      {/* Actions de swipe */}
       <div className={`absolute inset-y-0 right-0 flex transition-transform duration-300 ease-out z-50 pointer-events-auto ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <button onClick={handleEditAction} className="w-16 h-full bg-indigo-600 text-white flex flex-col items-center justify-center active:bg-indigo-700 pointer-events-auto gap-1">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+        <button onClick={handleEditAction} className="w-16 h-full bg-indigo-600 text-white flex items-center justify-center active:bg-indigo-700">
+          <Edit3 className="w-4 h-4" />
         </button>
-        <button onClick={handleDeleteAction} className={`w-16 h-full flex flex-col items-center justify-center transition-all gap-1 ${isConfirmingDelete ? 'bg-black text-white' : 'bg-red-600 text-white'}`}>
-          <span className="text-[8px] font-black uppercase">{isConfirmingDelete ? 'Ok ?' : 'Suppr.'}</span>
+        <button onClick={handleDeleteAction} className={`w-16 h-full flex items-center justify-center transition-all ${isConfirmingDelete ? 'bg-black text-white' : 'bg-red-600 text-white'}`}>
+          <span className="text-[8px] font-black uppercase text-center px-1">{isConfirmingDelete ? 'Ok ?' : 'Suppr.'}</span>
         </button>
       </div>
 
-      <div className={`relative flex items-center gap-3 p-3 transition-transform duration-300 ease-out z-10 flex-1 cursor-pointer h-full ${!tpl.isActive ? 'opacity-40' : ''}`} style={{ transform: `translateX(${isOpen ? -threshold : 0}px)` }} onClick={() => onToggleReveal()}>
-        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-base shrink-0 shadow-sm border border-slate-100">
+      {/* Contenu de l'item */}
+      <div 
+        className={`relative flex items-center gap-3 px-3 transition-transform duration-300 ease-out z-10 flex-1 cursor-pointer h-full ${!tpl.isActive ? 'opacity-30 grayscale' : ''}`} 
+        style={{ 
+          transform: `translateX(${isOpen ? -threshold : 0}px)`,
+          borderLeft: `3px solid ${category?.color || '#cbd5e1'}` 
+        }} 
+        onClick={() => onToggleReveal()}
+      >
+        <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 border border-slate-100 shadow-sm">
             {tpl.dayOfMonth}
         </div>
+        
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-700 text-[11px] truncate uppercase tracking-tight">{tpl.comment || 'Sans nom'}</span>
+          <div className="text-[10px] font-bold text-slate-800 truncate uppercase tracking-tight leading-tight">
+            {tpl.comment || 'Sans libellé'}
           </div>
-          <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Le {tpl.dayOfMonth} du mois</div>
+          <div className="text-[7px] font-black text-slate-300 uppercase tracking-[0.1em] mt-0.5">
+            Le {tpl.dayOfMonth} du mois
+          </div>
         </div>
+
         <div className="text-right flex flex-col items-end shrink-0">
-          <div className={`font-black text-[12px] ${tpl.type === 'INCOME' ? 'text-emerald-600' : 'text-slate-900'}`}>
+          <div className={`font-black text-[11px] ${tpl.type === 'INCOME' ? 'text-emerald-600' : 'text-slate-900'}`}>
             {tpl.type === 'INCOME' ? '+' : '-'}{Math.abs(tpl.amount).toLocaleString('fr-FR')}€
           </div>
-          <button onClick={(e) => { e.stopPropagation(); onStatusToggle(tpl.id); }} className="text-[6px] font-black text-slate-400 uppercase underline decoration-indigo-500/30 underline-offset-2">
-            {tpl.isActive ? 'Désactiver' : 'Activer'}
+          <button 
+            onClick={(e) => { e.stopPropagation(); onStatusToggle(tpl.id); }} 
+            className="text-[6px] font-black text-slate-400 uppercase tracking-tighter hover:text-indigo-500"
+          >
+            {tpl.isActive ? 'Suspendre' : 'Activer'}
           </button>
         </div>
       </div>
@@ -117,6 +127,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   const [showAdd, setShowAdd] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+  const formRef = useRef<HTMLDivElement>(null);
   
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [amount, setAmount] = useState('');
@@ -124,25 +135,26 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   const [comment, setComment] = useState('');
   const [day, setDay] = useState('1');
 
+  useEffect(() => {
+    if ((showAdd || editingTpl) && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showAdd, editingTpl]);
+
   const { expenseChartData, totalExpenses, totalIncomes, groupedByCat } = useMemo(() => {
     const activeTemplates = recurringTemplates.filter(t => t.isActive);
     const expenses = activeTemplates.filter(t => t.type === 'EXPENSE');
-    const incomes = activeTemplates.filter(t => t.type === 'INCOME');
     const totalE = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const totalI = incomes.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const totalI = activeTemplates.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
-    // Groupement pour le graphique
     const chartMap = expenses.reduce((acc, tpl) => {
       const cat = categories.find(c => c.id === tpl.categoryId);
       const catId = cat?.id || 'other';
-      if (!acc[catId]) {
-        acc[catId] = { name: cat?.name || 'Autre', value: 0, color: cat?.color || '#94a3b8' };
-      }
+      if (!acc[catId]) acc[catId] = { name: cat?.name || 'Autre', value: 0, color: cat?.color || '#94a3b8' };
       acc[catId].value += Math.abs(tpl.amount);
       return acc;
     }, {} as Record<string, { name: string, value: number, color: string }>);
 
-    // Groupement pour la liste par catégorie
     const listMap = recurringTemplates.reduce((acc, tpl) => {
         const catId = tpl.categoryId || 'other';
         if (!acc[catId]) acc[catId] = [];
@@ -152,9 +164,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
 
     return { 
       expenseChartData: Object.values(chartMap).sort((a, b) => b.value - a.value), 
-      totalExpenses: totalE,
-      totalIncomes: totalI,
-      groupedByCat: listMap
+      totalExpenses: totalE, totalIncomes: totalI, groupedByCat: listMap
     };
   }, [recurringTemplates, categories]);
 
@@ -189,7 +199,6 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
-      {/* REVENUS RÉCURRENTS */}
       <div className="bg-emerald-500 p-8 rounded-[40px] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
         <div className="flex items-center gap-3 mb-2">
@@ -199,7 +208,6 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <div className="text-4xl font-black text-white">+{totalIncomes.toLocaleString('fr-FR')}€</div>
       </div>
 
-      {/* GRAPHIQUE RÉPARTITION */}
       <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100">
         <div className="flex items-center gap-2 mb-8">
           <PieChart className="text-indigo-500 w-4 h-4" />
@@ -218,60 +226,47 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         </div>
       </div>
 
-      {/* LISTE GROUPÉE PAR CATÉGORIE */}
       <div className="space-y-4">
         <div className="px-2 flex items-center justify-between">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Détails par catégorie</h3>
           <List className="w-3 h-3 text-slate-300" />
         </div>
 
-        {Object.keys(groupedByCat).length === 0 && (
-            <div className="text-center py-10 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
-                <p className="text-[10px] font-black text-slate-300 uppercase">Aucun flux programmé</p>
-            </div>
-        )}
-
         {Object.entries(groupedByCat).map(([catId, templates]) => {
             const category = categories.find(c => c.id === catId);
-            const isExpanded = expandedCats[catId] !== false; // Ouvert par défaut
-            const catTotal = templates.reduce((sum, t) => sum + (t.isActive ? t.amount : 0), 0);
+            const isExpanded = expandedCats[catId] !== false;
+            const catTotal = templates.reduce((sum, t) => sum + (t.isActive ? (t.type === 'INCOME' ? t.amount : -t.amount) : 0), 0);
 
             return (
-                <div key={catId} className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
-                    {/* Header Catégorie */}
+                <div key={catId} className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm transition-all">
                     <button 
-                        onClick={() => toggleCat(catId)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                      onClick={() => toggleCat(catId)} 
+                      className={`w-full flex items-center justify-between p-4 transition-colors ${isExpanded ? 'bg-slate-50/50' : 'hover:bg-slate-50'}`}
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm" style={{ backgroundColor: `${category?.color || '#94a3b8'}15`, color: category?.color }}>
-                                {category?.icon || '📦'}
-                            </div>
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shadow-sm" style={{ backgroundColor: `${category?.color || '#94a3b8'}20`, color: category?.color }}>{category?.icon || '📦'}</div>
                             <div className="flex flex-col text-left">
-                                <span className="text-[11px] font-black uppercase tracking-widest text-slate-800">{category?.name || 'Autre'}</span>
-                                <span className="text-[8px] font-bold text-slate-400 uppercase">{templates.length} programmation(s)</span>
+                                <span className="text-[11px] font-black uppercase tracking-widest text-slate-900 leading-none">{category?.name || 'Autre'}</span>
+                                <span className="text-[7px] font-black text-slate-400 uppercase mt-1 tracking-tight">{templates.length} Opérations</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className={`text-[11px] font-black ${catTotal > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                                {catTotal > 0 ? '+' : ''}{catTotal.toLocaleString('fr-FR')}€
-                            </span>
+                            <span className={`text-[11px] font-black ${catTotal > 0 ? 'text-emerald-600' : 'text-slate-900'}`}>{catTotal > 0 ? '+' : ''}{catTotal.toLocaleString('fr-FR')}€</span>
                             {isExpanded ? <ChevronDown size={14} className="text-slate-300" /> : <ChevronRight size={14} className="text-slate-300" />}
                         </div>
                     </button>
-
-                    {/* Liste des items (Déroulant) */}
                     {isExpanded && (
-                        <div className="px-4 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                        <div className="px-3 pb-3 pt-1 space-y-1 animate-in fade-in duration-200">
                             {templates.map(tpl => (
                                 <RecurringItem 
-                                    key={tpl.id}
-                                    tpl={tpl}
-                                    isOpen={openItemId === tpl.id}
-                                    onToggleReveal={() => setOpenItemId(openItemId === tpl.id ? null : tpl.id)}
-                                    onDelete={(id) => onUpdate(recurringTemplates.filter(t => t.id !== id))}
-                                    onEdit={(t) => { setEditingTpl(t); setType(t.type); setAmount(t.amount.toString()); setCategoryId(t.categoryId); setComment(t.comment || ''); setDay(t.dayOfMonth.toString()); setShowAdd(true); }}
-                                    onStatusToggle={(id) => onUpdate(recurringTemplates.map(t => t.id === id ? { ...t, isActive: !t.isActive } : t))}
+                                  key={tpl.id} 
+                                  tpl={tpl} 
+                                  category={category} 
+                                  isOpen={openItemId === tpl.id} 
+                                  onToggleReveal={() => setOpenItemId(openItemId === tpl.id ? null : tpl.id)} 
+                                  onDelete={(id) => onUpdate(recurringTemplates.filter(t => t.id !== id))} 
+                                  onEdit={(t) => { setEditingTpl(t); setType(t.type); setAmount(t.amount.toString()); setCategoryId(t.categoryId); setComment(t.comment || ''); setDay(t.dayOfMonth.toString()); setShowAdd(true); }} 
+                                  onStatusToggle={(id) => onUpdate(recurringTemplates.map(t => t.id === id ? { ...t, isActive: !t.isActive } : t))} 
                                 />
                             ))}
                         </div>
@@ -280,45 +275,55 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
             );
         })}
 
-        {/* BOUTON AJOUTER */}
-        {showAdd ? (
-          <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-xl animate-in slide-in-from-bottom duration-300">
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="flex p-1 bg-slate-100 rounded-2xl">
-                <button type="button" onClick={() => setType('EXPENSE')} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'EXPENSE' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400'}`}>Charge Fixe</button>
-                <button type="button" onClick={() => setType('INCOME')} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'INCOME' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400'}`}>Revenu Fixe</button>
+        <div ref={formRef} className="pt-4">
+          {showAdd ? (
+            <div className={`p-6 rounded-[32px] border shadow-xl animate-in slide-in-from-bottom duration-300 ${editingTpl ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-slate-100'}`}>
+              <div className="flex items-center gap-2 mb-6">
+                <div className={`w-2 h-2 rounded-full ${editingTpl ? 'bg-indigo-600 animate-pulse' : 'bg-slate-400'}`} />
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+                  {editingTpl ? 'Modifier la programmation' : 'Nouvelle programmation'}
+                </h4>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 p-4 rounded-2xl">
-                  <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Montant</label>
-                  <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="bg-transparent text-lg font-black w-full outline-none" required />
+
+              <form onSubmit={handleSave} className="space-y-4">
+                <div className="flex p-1 bg-slate-100 rounded-2xl">
+                  <button type="button" onClick={() => setType('EXPENSE')} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'EXPENSE' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400'}`}>Charge Fixe</button>
+                  <button type="button" onClick={() => setType('INCOME')} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${type === 'INCOME' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400'}`}>Revenu Fixe</button>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl">
-                  <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Jour du mois</label>
-                  <input type="number" min="1" max="31" value={day} onChange={e => setDay(e.target.value)} className="bg-transparent text-lg font-black w-full outline-none" required />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100">
+                    <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Montant</label>
+                    <input type="text" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="bg-transparent text-lg font-black w-full outline-none" required />
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100">
+                    <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Jour du mois</label>
+                    <input type="number" min="1" max="31" value={day} onChange={e => setDay(e.target.value)} className="bg-transparent text-lg font-black w-full outline-none" required />
+                  </div>
                 </div>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl">
-                <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Libellé (Commentaire)</label>
-                <input type="text" value={comment} onChange={e => setComment(e.target.value)} placeholder="Ex: Loyer, Netflix..." className="bg-transparent text-[11px] font-bold w-full outline-none" />
-              </div>
-              <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 no-scrollbar">
-                {categories.filter(c => c.type === type).map(cat => (
-                  <button key={cat.id} type="button" onClick={() => setCategoryId(cat.id)} className={`flex flex-col items-center p-2 rounded-xl border-2 transition-all ${categoryId === cat.id ? 'border-indigo-600 bg-indigo-50' : 'bg-slate-50 border-transparent'}`}>
-                    <span className="text-xl">{cat.icon}</span>
-                    <span className="text-[7px] font-black uppercase truncate w-full text-center">{cat.name}</span>
-                  </button>
-                ))}
-              </div>
-              <button type="submit" className="w-full py-5 text-[10px] font-black uppercase text-white bg-slate-900 rounded-2xl shadow-lg">Enregistrer la programmation</button>
-              <button type="button" onClick={cancelEdit} className="w-full text-[9px] font-black uppercase text-slate-400 py-2">Annuler</button>
-            </form>
-          </div>
-        ) : (
-          <button onClick={() => setShowAdd(true)} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 bg-white active:scale-95 transition-all">
-            <IconPlus className="w-5 h-5" /> Programmer un nouveau flux
-          </button>
-        )}
+                <div className="bg-white p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[8px] font-black uppercase text-slate-400 block mb-1">Libellé</label>
+                  <input type="text" value={comment} onChange={e => setComment(e.target.value)} placeholder="Ex: Loyer, Netflix..." className="bg-transparent text-[11px] font-bold w-full outline-none" />
+                </div>
+                <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 no-scrollbar">
+                  {categories.filter(c => c.type === type).map(cat => (
+                    <button key={cat.id} type="button" onClick={() => setCategoryId(cat.id)} className={`flex flex-col items-center p-2 rounded-xl border-2 transition-all ${categoryId === cat.id ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'bg-white border-slate-50'}`}>
+                      <span className="text-xl">{cat.icon}</span>
+                      <span className="text-[7px] font-black uppercase truncate w-full text-center">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <button type="submit" className={`w-full py-5 text-[10px] font-black uppercase text-white rounded-2xl shadow-lg transition-all active:scale-95 ${editingTpl ? 'bg-indigo-600' : 'bg-slate-900'}`}>
+                  {editingTpl ? 'Mettre à jour' : 'Enregistrer'}
+                </button>
+                <button type="button" onClick={cancelEdit} className="w-full text-[9px] font-black uppercase text-slate-400 py-2">Annuler</button>
+              </form>
+            </div>
+          ) : (
+            <button onClick={() => setShowAdd(true)} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 bg-white active:scale-95 transition-all shadow-sm">
+              <IconPlus className="w-5 h-5" /> Programmer un nouveau flux
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
