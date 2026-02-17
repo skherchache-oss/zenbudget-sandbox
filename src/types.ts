@@ -18,7 +18,6 @@ export interface Category {
   budget?: number;
 }
 
-// Ajout de l'interface Project pour la cohérence avec le Dashboard
 export interface Project {
   id: string;
   name: string;
@@ -82,6 +81,6 @@ export interface AppState {
   activeAccountId: string;
   categories: Category[];
   tasks: Task[];
-  projects: Project[]; // Ajouté ici pour l'état global
+  projects: Project[];
   activeView?: ViewType;
 }

@@ -164,6 +164,12 @@ const Settings = ({
     setSelectedFeatures([]);
   };
 
+  const handleDeleteUserAccount = () => {
+    if (confirm("Attention : cette action supprimera définitivement votre compte et vos données cloud. Continuer ?")) {
+      onDeleteUserAccount();
+    }
+  };
+
   const isRealUser = user && user.uid !== 'local-user';
   const currentPhoto = (user && localStorage.getItem(`user_photo_hd_${user.uid}`)) || state.user.photoURL;
 
