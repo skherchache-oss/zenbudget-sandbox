@@ -126,6 +126,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   const [editingTpl, setEditingTpl] = useState<RecurringTemplate | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  // Initialisé à vide pour que tout soit fermé par défaut
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
   const formRef = useRef<HTMLDivElement>(null);
   
@@ -234,7 +235,8 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
 
         {Object.entries(groupedByCat).map(([catId, templates]) => {
             const category = categories.find(c => c.id === catId);
-            const isExpanded = expandedCats[catId] !== false;
+            // On vérifie si c'est explicitement true, sinon c'est false par défaut
+            const isExpanded = !!expandedCats[catId];
             const catTotal = templates.reduce((sum, t) => sum + (t.isActive ? (t.type === 'INCOME' ? t.amount : -t.amount) : 0), 0);
 
             return (
