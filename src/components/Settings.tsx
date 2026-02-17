@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'; 
 import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
-import { createDefaultAccount, generateId } from '../store'; 
+import { generateId } from '../store'; 
 import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
 import { Info, ShieldCheck, FileText, Scale, Star, Send, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
