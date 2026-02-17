@@ -56,6 +56,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null); // Référence pour le graphique
   const currentDate = useMemo(() => new Date(year, month), [year, month]);
 
   // GESTION DU FOCUS ET DU SCROLL BODY
@@ -76,6 +77,17 @@ const Dashboard: React.FC<DashboardProps> = ({
       document.body.style.touchAction = '';
     };
   }, [premiumType, showFeedbackModal]);
+
+  // GESTION DU CLIC EXTÉRIEUR POUR LE GRAPHIQUE
+  useEffect(() => {
+    const handleClickOutsideChart = (event: MouseEvent) => {
+      if (chartContainerRef.current && !chartContainerRef.current.contains(event.target as Node)) {
+        setActiveIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutsideChart);
+    return () => document.removeEventListener("mousedown", handleClickOutsideChart);
+  }, []);
 
   const handleFullAppRefresh = () => {
     setIsRefreshing(true);
@@ -121,7 +133,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     setLoadingAdvice(true);
     try {
-      // Utilisation de la SDK Google Generative AI au lieu de fetch direct
       const genAI = new GoogleGenerativeAI(API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -205,7 +216,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const onPieLeave = () => {
-    setActiveIndex(null);
+    // On laisse vide pour que le clic extérieur gère le reset sur mobile
   };
 
   if (!activeAccount) return <div className="p-10 text-center text-slate-400">Chargement de votre espace zen...</div>;
@@ -398,7 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex-1"><p className="text-[13px] font-bold text-slate-700 leading-snug italic">{aiAdvice}</p></div>
       </div>
 
-      {/* SECTION PROJETS - RÉDUITE */}
+      {/* SECTION PROJETS */}
       <div className="px-1">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
@@ -425,7 +436,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
         <div className="flex flex-col items-center mb-10">
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
-          <div className="h-[220px] w-full relative">
+          {/* Ajout de la ref ici pour détecter le clic extérieur */}
+          <div ref={chartContainerRef} className="h-[220px] w-full relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie 
@@ -437,6 +449,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   stroke="none"
                   onMouseEnter={onPieEnter}
                   onMouseLeave={onPieLeave}
+                  onClick={(_data, index) => setActiveIndex(index)}
                 >
                   {categorySummary.map((entry, index) => (
                     <Cell 
@@ -444,7 +457,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                       fill={entry.color} 
                       style={{ 
                         filter: activeIndex === index ? 'drop-shadow(0px 0px 8px rgba(0,0,0,0.1))' : 'none',
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        outline: 'none'
                       }}
                       strokeWidth={activeIndex === index ? 2 : 0}
                       stroke="#fff"
@@ -476,6 +491,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               className={`group transition-all duration-300 ${activeIndex === idx ? 'scale-[1.02]' : ''}`}
               onMouseEnter={() => setActiveIndex(idx)}
               onMouseLeave={() => setActiveIndex(null)}
+              onClick={() => setActiveIndex(idx)}
             >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-transform group-hover:scale-110" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>{cat.icon}</div>

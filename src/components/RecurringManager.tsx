@@ -14,36 +14,97 @@ interface RecurringManagerProps {
   onMonthChange: (offset: number) => void;
 }
 
-// --- COMPOSANT GRAPHIQUE ---
-const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: string }[], total: number }> = ({ data, total }) => {
+// --- COMPOSANT GRAPHIQUE DYNAMIQUE AVEC RESET AU CLIC EXTÉRIEUR ---
+const RecurringPieChart: React.FC<{ 
+  data: { name: string, value: number, color: string }[], 
+  total: number 
+}> = ({ data, total }) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
   let cumulativePercent = 0;
+
+  // Gestion du clic à l'extérieur pour réinitialiser le total
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (chartRef.current && !chartRef.current.contains(event.target as Node)) {
+        setActiveIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   function getCoordinatesForPercent(percent: number) {
     const x = Math.cos(2 * Math.PI * percent);
     const y = Math.sin(2 * Math.PI * percent);
     return [x, y];
   }
+
+  const activeData = activeIndex !== null ? data[activeIndex] : null;
+
   return (
-    <div className="relative w-44 h-44 mx-auto flex items-center justify-center">
-      <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
+    <div ref={chartRef} className="relative w-48 h-48 mx-auto flex items-center justify-center">
+      <svg viewBox="-1.1 -1.1 2.2 2.2" className="transform -rotate-90 w-full h-full drop-shadow-sm">
         {total === 0 ? (
           <circle cx="0" cy="0" r="1" fill="#f1f5f9" />
         ) : (
           data.map((slice, i) => {
             const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
-            cumulativePercent += slice.value / total;
+            const slicePercent = slice.value / total;
+            cumulativePercent += slicePercent;
             const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
-            const largeArcFlag = slice.value / total > 0.5 ? 1 : 0;
+            const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
             const pathData = [`M ${startX} ${startY}`, `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`, `L 0 0`].join(' ');
-            return <path key={i} d={pathData} fill={slice.color} className="transition-all duration-500" />;
+            
+            const isActive = activeIndex === i;
+            
+            return (
+              <path
+                key={i}
+                d={pathData}
+                fill={slice.color}
+                className="transition-all duration-300 cursor-pointer"
+                style={{ 
+                  transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                  opacity: activeIndex === null || isActive ? 1 : 0.6
+                }}
+                onMouseEnter={() => setActiveIndex(i)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveIndex(i);
+                }}
+                onMouseLeave={() => {
+                  // On ne reset pas au mouseLeave pour permettre le maintien de l'info sur mobile après clic
+                  // sauf si on est sur desktop (optionnel), ici on garde l'index pour le clic extérieur.
+                }}
+              />
+            );
           })
         )}
-        <circle cx="0" cy="0" r="0.78" fill="white" />
+        <circle cx="0" cy="0" r="0.75" fill="white" />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter italic">Total Charges</span>
-        <span className="text-xl font-black text-slate-900 leading-none">
-          -{Math.round(total).toLocaleString('fr-FR')}€
-        </span>
+      
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 pointer-events-none">
+        {activeData ? (
+          <div className="animate-in fade-in zoom-in duration-200">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter block mb-1">
+              {activeData.name}
+            </span>
+            <span className="text-xl font-black text-slate-900 leading-none">
+              -{Math.round(activeData.value).toLocaleString('fr-FR')}€
+            </span>
+            <div className="text-[7px] font-bold text-slate-400 mt-1 uppercase">
+              {Math.round((activeData.value / total) * 100)}% des charges
+            </div>
+          </div>
+        ) : (
+          <div className="animate-in fade-in duration-300">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter italic">Total Charges</span>
+            <span className="text-xl font-black text-slate-900 leading-none">
+              -{Math.round(total).toLocaleString('fr-FR')}€
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -74,7 +135,6 @@ const RecurringItem: React.FC<{
 
   return (
     <div className="flex items-center mb-1.5 bg-slate-50/40 rounded-xl border border-slate-100 overflow-hidden relative h-14 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-      {/* Actions de swipe */}
       <div className={`absolute inset-y-0 right-0 flex transition-transform duration-300 ease-out z-50 pointer-events-auto ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <button onClick={handleEditAction} className="w-16 h-full bg-indigo-600 text-white flex items-center justify-center active:bg-indigo-700">
           <Edit3 className="w-4 h-4" />
@@ -84,7 +144,6 @@ const RecurringItem: React.FC<{
         </button>
       </div>
 
-      {/* Contenu de l'item */}
       <div 
         className={`relative flex items-center gap-3 px-3 transition-transform duration-300 ease-out z-10 flex-1 cursor-pointer h-full ${!tpl.isActive ? 'opacity-30 grayscale' : ''}`} 
         style={{ 
@@ -126,7 +185,6 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
   const [editingTpl, setEditingTpl] = useState<RecurringTemplate | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
-  // Initialisé à vide pour que tout soit fermé par défaut
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
   const formRef = useRef<HTMLDivElement>(null);
   
@@ -235,7 +293,6 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
 
         {Object.entries(groupedByCat).map(([catId, templates]) => {
             const category = categories.find(c => c.id === catId);
-            // On vérifie si c'est explicitement true, sinon c'est false par défaut
             const isExpanded = !!expandedCats[catId];
             const catTotal = templates.reduce((sum, t) => sum + (t.isActive ? (t.type === 'INCOME' ? t.amount : -t.amount) : 0), 0);
 
