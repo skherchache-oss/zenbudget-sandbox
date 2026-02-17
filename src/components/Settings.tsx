@@ -498,7 +498,7 @@ const Settings = ({
         <SectionTitle title="À propos & Légal" />
         <div className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
                   <Info size={14} />
                 </div>
@@ -506,7 +506,7 @@ const Settings = ({
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-700 leading-none mb-0.5">ZenBudget App</span>
                   <span className="text-[8px] font-bold text-slate-400">Version 1.0.0 Stable</span>
                 </div>
-             </div>
+              </div>
           </div>
           <div className="flex flex-col">
             <button onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')} className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50">
