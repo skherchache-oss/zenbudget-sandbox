@@ -179,18 +179,17 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
-      {/* REVENUS FIXES (Corrigé pour éviter le rognage) */}
+      {/* REVENUS FIXES (Style Dashboard - Corrigé) */}
       <div className="bg-emerald-500 px-8 py-8 rounded-[40px] shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         <span className="text-emerald-100 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Revenus fixes mensuels</span>
         <div className="flex items-baseline gap-2">
-          {/* text-4xl au lieu de 5xl pour éviter de déborder sur mobile */}
           <div className="text-4xl font-black tracking-tighter text-white">+{Math.round(totalIncomes).toLocaleString('fr-FR')}</div>
           <span className="text-xl font-bold text-emerald-200">€</span>
         </div>
       </div>
 
-      {/* REPARTITION DES CHARGES - JUMEAU DASHBOARD (Sans la liste sous le graphe) */}
+      {/* REPARTITION DES CHARGES - JUMEAU DASHBOARD */}
       <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
         <div className="flex flex-col items-center">
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
@@ -225,10 +224,10 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
               </PieChart>
             </ResponsiveContainer>
             
-            {/* Overlay central dynamique */}
+            {/* Overlay central dynamique avec intitulé explicite */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-10 text-center">
               <span className="text-[9px] font-black uppercase text-slate-400 mb-0.5 leading-tight truncate w-full">
-                {activeIndex !== null ? expenseChartData[activeIndex].name : 'Total Fixe'}
+                {activeIndex !== null ? expenseChartData[activeIndex].name : 'Charges Fixes'}
               </span>
               <span className="text-2xl font-black text-slate-900 leading-none">
                 -{formatVal(activeIndex !== null ? expenseChartData[activeIndex].value : totalExpenses)}€
