@@ -519,7 +519,7 @@ const App: React.FC = () => {
                    <div className="flex gap-3 px-1 items-start">
                       <span className="font-black text-indigo-600">1.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                        Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
+                         Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span> <span className="text-[10px] text-indigo-500 font-bold">(au démarrage)</span>.
                       </p>
                    </div>
                    <div className="flex gap-3 px-1 items-start">
@@ -532,6 +532,12 @@ const App: React.FC = () => {
                       <span className="font-black text-indigo-600">3.</span>
                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
                         Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
+                      </p>
+                   </div>
+                   <div className="flex gap-3 px-1 items-start opacity-80">
+                      <span className="font-black text-indigo-600">4.</span>
+                      <p className="text-[12px] font-medium text-slate-500 leading-tight italic">
+                        <span className="font-bold text-slate-800">Export Excel :</span> bientôt disponible pour les membres <span className="text-amber-600 font-bold">Premium</span> !
                       </p>
                    </div>
                 </div>
