@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react'; 
+import React, { useState, useRef, useEffect } from 'react'; 
 import { AppState, BudgetAccount, Category } from '../types'; 
 import { IconPlus } from './Icons'; 
 import { createDefaultAccount, generateId } from '../store'; 
 import { User as FirebaseUser, updateProfile, deleteUser } from 'firebase/auth';
-import { Info, ShieldCheck, FileText, Scale } from 'lucide-react';
+import { Info, ShieldCheck, FileText, Scale, Star, Send, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SettingsProps { 
   state: AppState; 
@@ -20,6 +21,7 @@ interface SettingsProps {
   onBackup: (accountName?: string) => void;
   onImport: (file: File) => void;
   onUpdateUser: (userData: { name?: string; photoURL?: string | null }) => void; 
+  onGiveFeedback?: (data: any) => void;
 } 
 
 const EMOJI_LIST = [
@@ -87,8 +89,12 @@ const AccountItem: React.FC<{
   ); 
 }; 
 
-const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout, onUpdateUser, onUpdateCategories }) => { 
-  const [showPremiumModal, setShowPremiumModal] = useState<'ACCOUNT' | 'SHARE' | null>(null);
+const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSetActiveAccount, onDeleteAccount, onReset, onShowWelcome, onBackup, onImport, onLogin, onLogout, onUpdateUser, onUpdateCategories, onGiveFeedback }) => { 
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackStep, setFeedbackStep] = useState<'RATING' | 'FEATURES'>('RATING');
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null); 
   const [editName, setEditName] = useState(''); 
   const [manualDay, setManualDay] = useState('');
@@ -101,6 +107,36 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showFeedbackModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showFeedbackModal]);
+
+  const handleSendFeedback = () => {
+    onGiveFeedback?.({
+      rating: userRating,
+      interestedFeatures: selectedFeatures,
+      date: new Date().toISOString(),
+      source: 'settings_premium'
+    });
+    setShowFeedbackModal(false);
+    setTimeout(() => {
+      setFeedbackStep('RATING');
+      setUserRating(null);
+      setSelectedFeatures([]);
+    }, 500);
+  };
+
+  const toggleFeature = (feature: string) => {
+    setSelectedFeatures(prev => 
+      prev.includes(feature) ? prev.filter(f => f !== feature) : [...prev, feature]
+    );
+  };
 
   const activeAccount = state.accounts.find(a => a.id === state.activeAccountId); 
   const currentCycleDay = activeAccount?.cycleEndDay || 0;
@@ -264,23 +300,80 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
-        
-      {showPremiumModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in zoom-in duration-200">
-          <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl text-center">
-            <img src="/ZB-logo-192.png" alt="ZenBudget Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg border border-slate-100" />
-            <h3 className="text-xl font-black text-slate-900 mb-2">
-              {showPremiumModal === 'ACCOUNT' ? 'Multi-comptes' : 'Partage de compte'}
-            </h3>
-            <p className="text-sm text-slate-500 font-medium mb-6">
-              {showPremiumModal === 'ACCOUNT' 
-                ? 'La création de comptes illimités sera disponible prochainement dans ZenBudget Premium.'
-                : 'Le partage de votre budget en temps réel avec un proche arrive bientôt dans la version Premium.'}
-            </p>
-            <button onClick={() => setShowPremiumModal(null)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-100">D'accord ✨</button>
+      
+      {/* MODAL FEEDBACK PREMIUM */}
+      <AnimatePresence>
+        {showFeedbackModal && (
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-[99999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-indigo-950/30 backdrop-blur-md"
+              onClick={() => setShowFeedbackModal(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-[40px] p-6 w-full max-w-[340px] shadow-2xl relative z-10 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500">
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center">
+                <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
+                  {feedbackStep === 'RATING' ? '✨' : '💎'}
+                </div>
+
+                {feedbackStep === 'RATING' ? (
+                  <>
+                    <h3 className="text-xl font-black text-slate-900 mb-1 italic">L'app vous plaît ?</h3>
+                    <p className="text-xs text-slate-500 font-medium mb-6">Votre avis nous aide énormément.</p>
+                    <div className="flex justify-center gap-2 mb-6">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => setUserRating(star)}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}
+                        >
+                          <Star className={`w-4 h-4 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <button disabled={!userRating} onClick={() => setFeedbackStep('FEATURES')}
+                      className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest disabled:opacity-30 shadow-xl"
+                    >Suivant</button>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-black text-slate-900 mb-1 italic">ZenBudget Premium</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mb-4">Qu'est-ce qui vous serait le plus utile ?</p>
+                    
+                    <div className="grid grid-cols-2 gap-2 mb-6 text-left max-h-[220px] overflow-y-auto pr-1 no-scrollbar">
+                      {[
+                        { id: 'multi-accounts', label: 'Comptes Multiples', icon: '🏦' },
+                        { id: 'share', label: 'Partage Zen', icon: '👥' },
+                        { id: 'projects', label: 'Multi-projets', icon: '🎯' }, 
+                        { id: 'csv', label: 'Export Excel', icon: '📊' }, 
+                        { id: 'ai', label: 'Conseils IA', icon: '🤖' }
+                      ].map((feat) => (
+                        <button key={feat.id} onClick={() => toggleFeature(feat.id)}
+                          className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
+                        >
+                          <span className="text-lg">{feat.icon}</span>
+                          <span className={`text-[9px] font-black uppercase text-center leading-tight ${selectedFeatures.includes(feat.id) ? 'text-indigo-600' : 'text-slate-500'}`}>{feat.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+                    >Envoyer <Send className="w-3 h-3" /></button>
+                  </>
+                )}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* PROFIL SECTION */}
       <section className="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm space-y-6">
@@ -354,7 +447,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
               onDelete={onDeleteAccount} 
               onRename={(a) => { setEditingAccountId(a.id); setEditName(a.name); }} 
               onSelect={onSetActiveAccount} 
-              onShowPremium={() => setShowPremiumModal('SHARE')}
+              onShowPremium={() => setShowFeedbackModal(true)}
               canDelete={state.accounts.length > 1} 
             /> 
           ))} 
@@ -369,7 +462,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             </div> 
           )} 
 
-          <button onClick={() => setShowPremiumModal('ACCOUNT')} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
+          <button onClick={() => setShowFeedbackModal(true)} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
             <span className="opacity-40 group-hover:opacity-100">💎</span>
             <IconPlus className="w-3 h-3" /> Ajouter un compte 
           </button> 
@@ -469,11 +562,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* À PROPOS & LÉGAL (RESSERRÉ SUR 3 LIGNES) */}
+      {/* À PROPOS & LÉGAL */}
       <section>
         <SectionTitle title="À propos & Légal" />
         <div className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm">
-          {/* Ligne Version */}
           <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
              <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
