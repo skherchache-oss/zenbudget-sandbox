@@ -208,8 +208,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               </h3>
               <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
                 {premiumType === 'CSV' 
-                  ? "L'exportation vers Excel arrive bientôt. Quelles fonctionnalités aimeriez-vous voir dans la version Premium ?" 
-                  : "Les objectifs d'épargne arrivent bientôt. Dites-nous ce qui vous aiderait le plus pour rester Zen ?"}
+                  ? "L'exportation vers Excel arrive bientôt dans ZenBudget Premium." 
+                  : "La gestion multi-projets arrive bientôt dans ZenBudget Premium."}
               </p>
               <button 
                 onClick={() => { setPremiumType(null); setShowFeedbackModal(true); }} 
@@ -267,8 +267,15 @@ const Dashboard: React.FC<DashboardProps> = ({
                 ) : (
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-2 italic">ZenBudget Premium</h3>
-                    <div className="grid grid-cols-1 gap-2 mb-8 text-left">
-                      {[{ id: 'projects', label: 'Multi-projets', icon: '🎯' }, { id: 'csv', label: 'Export Excel', icon: '📊' }, { id: 'ai', label: 'Conseils IA', icon: '🤖' }].map((feat) => (
+                    <p className="text-sm text-slate-500 font-medium mb-6">Qu'est-ce qui vous serait le plus utile ?</p>
+                    <div className="grid grid-cols-1 gap-2 mb-8 text-left max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
+                      {[
+                        { id: 'multi-accounts', label: 'Créer plusieurs comptes', icon: '🏦' },
+                        { id: 'share', label: 'Partage des comptes', icon: '👥' },
+                        { id: 'projects', label: 'Multi-projets', icon: '🎯' }, 
+                        { id: 'csv', label: 'Export Excel', icon: '📊' }, 
+                        { id: 'ai', label: 'Conseils IA', icon: '🤖' }
+                      ].map((feat) => (
                         <button key={feat.id} onClick={() => toggleFeature(feat.id)}
                           className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
                         >
@@ -277,7 +284,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         </button>
                       ))}
                     </div>
-                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 mt-2"
                     >Envoyer <Send className="w-3 h-3" /></button>
                   </>
                 )}

@@ -534,7 +534,7 @@ const App: React.FC = () => {
                     <div className="flex gap-3 px-1 items-start">
                        <span className="font-black text-indigo-600">2.</span>
                        <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                         Saisissez vos denses variables dans le <span className="font-bold text-slate-800">Journal</span>, au jour le jour ou selon vos besoins.
+                         Saisissez vos dépenses variables dans le <span className="font-bold text-slate-800">Journal</span>, au jour le jour ou selon vos besoins.
                        </p>
                     </div>
 
