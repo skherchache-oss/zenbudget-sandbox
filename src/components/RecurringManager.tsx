@@ -179,19 +179,20 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
-      {/* REVENUS FIXES (Style Dashboard) */}
-      <div className="bg-emerald-500 px-8 py-10 rounded-[40px] shadow-2xl relative overflow-hidden">
+      {/* REVENUS FIXES (Corrigé pour éviter le rognage) */}
+      <div className="bg-emerald-500 px-8 py-8 rounded-[40px] shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         <span className="text-emerald-100 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Revenus fixes mensuels</span>
         <div className="flex items-baseline gap-2">
-          <div className="text-5xl font-black tracking-tighter text-white">+{Math.round(totalIncomes).toLocaleString('fr-FR')}</div>
-          <span className="text-2xl font-bold text-emerald-200">€</span>
+          {/* text-4xl au lieu de 5xl pour éviter de déborder sur mobile */}
+          <div className="text-4xl font-black tracking-tighter text-white">+{Math.round(totalIncomes).toLocaleString('fr-FR')}</div>
+          <span className="text-xl font-bold text-emerald-200">€</span>
         </div>
       </div>
 
-      {/* REPARTITION DES CHARGES - COPIE CONFORME DASHBOARD */}
+      {/* REPARTITION DES CHARGES - JUMEAU DASHBOARD (Sans la liste sous le graphe) */}
       <div className="bg-white rounded-[45px] p-8 border border-slate-50 shadow-xl">
-        <div className="flex flex-col items-center mb-10">
+        <div className="flex flex-col items-center">
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Répartition des charges</h2>
           <div className="h-[220px] w-full relative">
             <ResponsiveContainer width="100%" height="100%">
@@ -239,31 +240,6 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
               )}
             </div>
           </div>
-        </div>
-
-        {/* Liste des catégories (Style Dashboard) */}
-        <div className="grid grid-cols-1 gap-6">
-          {expenseChartData.map((cat, idx) => (
-            <div 
-              key={cat.id} 
-              className={`group transition-all duration-300 ${activeIndex === idx ? 'scale-[1.02]' : ''}`}
-              onMouseEnter={() => setActiveIndex(idx)}
-              onMouseLeave={() => setActiveIndex(null)}
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-transform group-hover:scale-110" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>{cat.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-[11px] font-black uppercase text-slate-800 truncate">{cat.name}</span>
-                    <span className="text-[13px] font-black text-slate-900">{formatVal(cat.value)}€</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${cat.percent}%`, backgroundColor: cat.color }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -317,7 +293,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
             );
         })}
 
-        {/* FORMULAIRE D'AJOUT / ÉDITION (PRÉSERVÉ) */}
+        {/* FORMULAIRE D'AJOUT / ÉDITION */}
         <div ref={formRef} className="pt-4">
           {showAdd ? (
             <div className={`p-6 rounded-[32px] border shadow-xl animate-in slide-in-from-bottom duration-300 ${editingTpl ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-slate-100'}`}>
