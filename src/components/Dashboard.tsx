@@ -208,14 +208,14 @@ const Dashboard: React.FC<DashboardProps> = ({
               </h3>
               <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
                 {premiumType === 'CSV' 
-                  ? "L'exportation de vos rapports vers Excel sera bientôt disponible." 
-                  : "Les objectifs d'épargne arrivent bientôt pour vous aider."}
+                  ? "L'exportation vers Excel arrive bientôt. Quelles fonctionnalités aimeriez-vous voir dans la version Premium ?" 
+                  : "Les objectifs d'épargne arrivent bientôt. Dites-nous ce qui vous aiderait le plus pour rester Zen ?"}
               </p>
               <button 
                 onClick={() => { setPremiumType(null); setShowFeedbackModal(true); }} 
                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all"
               >
-                D'accord ✨
+                Donner mon avis ✨
               </button>
             </motion.div>
           </div>
@@ -324,7 +324,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            <div className="absolute -top-3 -right-2 text-lg drop-shadow-sm select-none">👑</div>
+            <div className="absolute -top-3 -right-2 text-lg drop-shadow-sm select-none">💎</div>
           </div>
           <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider">Export CSV</span>
         </button>
@@ -369,7 +369,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <button onClick={() => setPremiumType('PROJECTS')} className="relative w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all">
             <Plus className="w-5 h-5" />
-            <div className="absolute -top-3 -right-2 text-lg drop-shadow-sm select-none">👑</div>
+            <div className="absolute -top-3 -right-2 text-lg drop-shadow-sm select-none">💎</div>
           </button>
         </div>
         <div className="grid grid-cols-1">

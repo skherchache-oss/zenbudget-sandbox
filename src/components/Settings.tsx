@@ -67,8 +67,8 @@ const AccountItem: React.FC<{
       </div> 
 
       <div className="flex items-center gap-1"> 
-        <button onClick={(e) => { e.stopPropagation(); onShowPremium(); }} className="p-2 text-slate-300 hover:text-amber-500 flex items-center gap-1"> 
-          <span className="text-[10px]">👑</span>
+        <button onClick={(e) => { e.stopPropagation(); onShowPremium(); }} className="p-2 text-slate-300 hover:text-indigo-500 flex items-center gap-1 transition-colors"> 
+          <span className="text-[10px]">💎</span>
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
         </button> 
         <button onClick={(e) => { e.stopPropagation(); onRename(acc); }} className="p-2 text-slate-300 hover:text-indigo-600"> 
@@ -369,8 +369,8 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
             </div> 
           )} 
 
-          <button onClick={() => setShowPremiumModal('ACCOUNT')} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-amber-200 hover:text-amber-500 transition-all group"> 
-            <span className="opacity-40 group-hover:opacity-100">👑</span>
+          <button onClick={() => setShowPremiumModal('ACCOUNT')} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
+            <span className="opacity-40 group-hover:opacity-100">💎</span>
             <IconPlus className="w-3 h-3" /> Ajouter un compte 
           </button> 
         </div> 

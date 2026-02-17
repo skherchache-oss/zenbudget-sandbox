@@ -6,8 +6,8 @@ import { IconPlus, IconHome, IconCalendar, IconSettings } from './components/Ico
 
 // Firebase & Auth
 import { auth, loginWithGoogle, logout, db } from './firebase'; 
-import { onAuthStateChanged, User as FirebaseUser, deleteUser } from 'firebase/auth';
-import { doc, setDoc, deleteDoc, addDoc, collection } from 'firebase/firestore';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 
 // Framer Motion
 import { motion, AnimatePresence } from 'framer-motion';
@@ -257,6 +257,7 @@ const App: React.FC = () => {
     let nextTx = [...acc.transactions];
     let nextDeleted = [...(acc.deletedVirtualIds || [])];
     const targetId = t.id || editingTransaction?.id;
+    
     if (targetId?.startsWith('virtual-')) {
       nextDeleted.push(targetId!);
       nextTx = [{ ...t, id: generateId(), templateId: targetId.split('-')[1] } as Transaction, ...nextTx];
@@ -265,6 +266,7 @@ const App: React.FC = () => {
     } else {
       nextTx = [{ ...t, id: generateId() } as Transaction, ...nextTx];
     }
+    
     const nextAccounts = [...state.accounts];
     nextAccounts[accIndex] = { ...acc, transactions: nextTx, deletedVirtualIds: nextDeleted };
     const newState = { ...state, accounts: nextAccounts };
@@ -488,7 +490,6 @@ const App: React.FC = () => {
           />
         )}
         
-        {/* NOUVELLE POPUP WELCOME */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div 
@@ -520,21 +521,20 @@ const App: React.FC = () => {
                     <div className="flex gap-3 px-1 items-start">
                        <span className="font-black text-indigo-600">1.</span>
                        <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                          Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
+                         Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
                        </p>
                     </div>
 
-                    <div className="flex gap-3 px-1 items-start">
-                       <span className="font-black text-indigo-600 text-[10px] mt-0.5">•</span>
+                    <div className="flex px-1 items-start">
                        <p className="text-[11px] font-bold text-indigo-500 leading-tight italic">
-                          Pensez aussi à ajuster votre <span className="underline">date de cycle budgétaire</span> (ex: jour de paie) tout en bas des <span className="font-black">Paramètres</span>.
+                         Pensez aussi à ajuster votre <span className="underline">date de cycle budgétaire</span> (ex: jour de paie) tout en bas des <span className="font-black">Paramètres</span>.
                        </p>
                     </div>
 
                     <div className="flex gap-3 px-1 items-start">
                        <span className="font-black text-indigo-600">2.</span>
                        <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                         Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
+                         Saisissez vos denses variables dans le <span className="font-bold text-slate-800">Journal</span>, au jour le jour ou selon vos besoins.
                        </p>
                     </div>
 
