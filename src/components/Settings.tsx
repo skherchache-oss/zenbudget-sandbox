@@ -14,29 +14,36 @@ const SectionTitle = ({ title }: { title: string }) => (
 );
 
 const AccountItem = ({ acc, isActive, onDelete, onRename, onSelect, onShowPremium, canDelete }: any) => (
-  <div className={`group flex items-center justify-between p-4 rounded-[24px] transition-all border-2 ${isActive ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white border-slate-50 hover:border-indigo-100'}`}>
-    <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => onSelect(acc.id)}>
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-50 text-indigo-600'}`}>
-        {acc.name.charAt(0).toUpperCase()}
+  <div className="space-y-2">
+    <div className={`group flex items-center justify-between p-4 rounded-[24px] transition-all border-2 ${isActive ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white border-slate-50 hover:border-indigo-100'}`}>
+      <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => onSelect(acc.id)}>
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-50 text-indigo-600'}`}>
+          {acc.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex flex-col">
+          <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-700'}`}>{acc.name}</span>
+          {isActive && <span className="text-[7px] font-black text-indigo-200 uppercase tracking-widest">Compte Actif</span>}
+        </div>
       </div>
-      <div className="flex flex-col">
-        <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-700'}`}>{acc.name}</span>
-        {isActive && <span className="text-[7px] font-black text-indigo-200 uppercase tracking-widest">Compte Actif</span>}
-      </div>
-    </div>
-    <div className="flex items-center gap-1">
-      <button onClick={() => onRename(acc)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
-        <Edit2 size={14} />
-      </button>
-      <button onClick={() => onShowPremium()} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
-        <IconPlus size={14} />
-      </button>
-      {canDelete && (
-        <button onClick={() => onDelete(acc.id)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-red-300'}`}>
-          <Trash2 size={14} />
+      <div className="flex items-center gap-1">
+        <button onClick={() => onRename(acc)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
+          <Edit2 size={14} />
         </button>
-      )}
+        <button onClick={() => onShowPremium()} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
+          <IconPlus size={14} />
+        </button>
+        {canDelete && (
+          <button onClick={() => onDelete(acc.id)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-red-300'}`}>
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
     </div>
+    {isActive && (
+      <p className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest px-4">
+        💎 Le partage de compte sera bientôt disponible sur ZenBudget Premium
+      </p>
+    )}
   </div>
 );
 
@@ -313,19 +320,21 @@ const Settings = ({
       {/* COMPTES */}
       <section> 
         <SectionTitle title="Mes Comptes" /> 
-        <div className="space-y-1"> 
-          {state.accounts.map((acc: any) => ( 
-            <AccountItem 
-              key={acc.id} 
-              acc={acc} 
-              isActive={state.activeAccountId === acc.id} 
-              onDelete={onDeleteAccount} 
-              onRename={(a: any) => { setEditingAccountId(a.id); setEditName(a.name); }} 
-              onSelect={onSetActiveAccount} 
-              onShowPremium={() => { setPremiumType('SHARE'); setShowFeedbackModal(true); }}
-              canDelete={state.accounts.length > 1} 
-            /> 
-          ))} 
+        <div className="space-y-4"> 
+          <div className="space-y-1">
+            {state.accounts.map((acc: any) => ( 
+              <AccountItem 
+                key={acc.id} 
+                acc={acc} 
+                isActive={state.activeAccountId === acc.id} 
+                onDelete={onDeleteAccount} 
+                onRename={(a: any) => { setEditingAccountId(a.id); setEditName(a.name); }} 
+                onSelect={onSetActiveAccount} 
+                onShowPremium={() => { setPremiumType('SHARE'); setShowFeedbackModal(true); }}
+                canDelete={state.accounts.length > 1} 
+              /> 
+            ))} 
+          </div>
            
           {editingAccountId && ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mb-2"> 
@@ -337,10 +346,15 @@ const Settings = ({
             </div> 
           )} 
 
-          <button onClick={() => { setPremiumType('ACCOUNTS'); setShowFeedbackModal(true); }} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
-            <span className="opacity-40 group-hover:opacity-100">💎</span>
-            <IconPlus className="w-3 h-3" /> Ajouter un compte 
-          </button> 
+          <div className="space-y-2">
+            <button onClick={() => { setPremiumType('ACCOUNTS'); setShowFeedbackModal(true); }} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
+              <span className="opacity-40 group-hover:opacity-100">💎</span>
+              <IconPlus className="w-3 h-3" /> Ajouter un compte 
+            </button> 
+            <p className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest px-4 text-center">
+              💎 La création de plusieurs comptes sera bientôt disponible sur ZenBudget Premium
+            </p>
+          </div>
         </div> 
       </section>
 
