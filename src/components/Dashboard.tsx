@@ -235,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[40px] p-8 w-full max-w-[340px] shadow-2xl relative z-10 overflow-hidden"
+              className="bg-white rounded-[40px] p-6 w-full max-w-[340px] shadow-2xl relative z-10 overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
               <button onClick={() => setShowFeedbackModal(false)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-500">
@@ -243,20 +243,20 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
 
               <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-50 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6">
+                <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
                   {feedbackStep === 'RATING' ? '✨' : '💎'}
                 </div>
 
                 {feedbackStep === 'RATING' ? (
                   <>
-                    <h3 className="text-xl font-black text-slate-900 mb-2 italic">L'app vous plaît ?</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-8">Votre avis nous aide énormément.</p>
-                    <div className="flex justify-center gap-2 mb-8">
+                    <h3 className="text-xl font-black text-slate-900 mb-1 italic">L'app vous plaît ?</h3>
+                    <p className="text-xs text-slate-500 font-medium mb-6">Votre avis nous aide énormément.</p>
+                    <div className="flex justify-center gap-2 mb-6">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button key={star} onClick={() => setUserRating(star)}
-                          className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${userRating && userRating >= star ? 'bg-amber-400 text-white shadow-lg' : 'bg-slate-50 text-slate-300'}`}
                         >
-                          <Star className={`w-5 h-5 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
+                          <Star className={`w-4 h-4 ${userRating && userRating >= star ? 'fill-current' : ''}`} />
                         </button>
                       ))}
                     </div>
@@ -266,25 +266,28 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </>
                 ) : (
                   <>
-                    <h3 className="text-xl font-black text-slate-900 mb-2 italic">ZenBudget Premium</h3>
-                    <p className="text-sm text-slate-500 font-medium mb-6">Qu'est-ce qui vous serait le plus utile ?</p>
-                    <div className="grid grid-cols-1 gap-2 mb-8 text-left max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
+                    <h3 className="text-xl font-black text-slate-900 mb-1 italic">ZenBudget Premium</h3>
+                    <p className="text-[11px] text-slate-500 font-medium mb-4">Qu'est-ce qui vous serait le plus utile ?</p>
+                    
+                    {/* Grille serrée pour optimiser l'espace */}
+                    <div className="grid grid-cols-2 gap-2 mb-6 text-left max-h-[220px] overflow-y-auto pr-1 no-scrollbar">
                       {[
-                        { id: 'multi-accounts', label: 'Créer plusieurs comptes', icon: '🏦' },
-                        { id: 'share', label: 'Partage des comptes', icon: '👥' },
+                        { id: 'multi-accounts', label: 'Comptes Multiples', icon: '🏦' },
+                        { id: 'share', label: 'Partage Zen', icon: '👥' },
                         { id: 'projects', label: 'Multi-projets', icon: '🎯' }, 
                         { id: 'csv', label: 'Export Excel', icon: '📊' }, 
                         { id: 'ai', label: 'Conseils IA', icon: '🤖' }
                       ].map((feat) => (
                         <button key={feat.id} onClick={() => toggleFeature(feat.id)}
-                          className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
+                          className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${selectedFeatures.includes(feat.id) ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-50 bg-slate-50/30'}`}
                         >
                           <span className="text-lg">{feat.icon}</span>
-                          <span className={`text-[11px] font-black uppercase ${selectedFeatures.includes(feat.id) ? 'text-indigo-600' : 'text-slate-500'}`}>{feat.label}</span>
+                          <span className={`text-[9px] font-black uppercase text-center leading-tight ${selectedFeatures.includes(feat.id) ? 'text-indigo-600' : 'text-slate-500'}`}>{feat.label}</span>
                         </button>
                       ))}
                     </div>
-                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 mt-2"
+                    
+                    <button onClick={handleSendFeedback} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
                     >Envoyer <Send className="w-3 h-3" /></button>
                   </>
                 )}
