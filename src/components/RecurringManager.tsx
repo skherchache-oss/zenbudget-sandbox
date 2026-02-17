@@ -179,16 +179,19 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
-      {/* REVENUS FIXES (Style Dashboard - Corrigé) */}
-      <div className="bg-emerald-500 px-8 py-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+      {/* REVENUS FIXES (Style Dashboard - Corrigé et Aligné) */}
+      <div className="bg-emerald-500 px-6 py-8 rounded-[40px] shadow-2xl relative overflow-hidden flex items-center justify-between">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-        <span className="text-emerald-100 text-[10px] font-black uppercase tracking-[0.3em] mb-2 block">Revenus fixes mensuels</span>
-        <div className="flex items-baseline gap-2">
-          {/* Correction ici : affichage explicite de totalIncomes */}
-          <div className="text-4xl font-black tracking-tighter text-white">
-            +{formatVal(totalIncomes).split(',')[0]}
-          </div>
-          <span className="text-xl font-bold text-emerald-200">€</span>
+        
+        <span className="text-emerald-100 text-[10px] font-black uppercase tracking-[0.3em] z-10">
+          Revenus fixes mensuels
+        </span>
+
+        <div className="flex items-baseline gap-1 z-10">
+          <span className="text-3xl font-black tracking-tighter text-white">
+            +{Math.round(totalIncomes).toLocaleString('fr-FR')}
+          </span>
+          <span className="text-lg font-bold text-emerald-200">€</span>
         </div>
       </div>
 
