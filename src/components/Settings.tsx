@@ -65,7 +65,6 @@ const Settings = ({
 
   const activeAccount = state.accounts.find((a: any) => a.id === state.activeAccountId);
   
-  // CORRECTION : On utilise cycleEndDay pour correspondre à la structure de l'App
   const currentCycleDay = activeAccount?.cycleEndDay !== undefined ? activeAccount.cycleEndDay : (state.cycleEndDay || 0);
   const presets = [1, 5, 25, 28, 0];
   const isCustomDay = !presets.includes(currentCycleDay);
@@ -141,7 +140,7 @@ const Settings = ({
   };
 
   const updateCycleDay = (day: number) => {
-    onUpdateBudget(day); // CORRECTION : appelle onUpdateBudget
+    onUpdateBudget(day);
     setManualDay('');
   };
 
@@ -149,7 +148,7 @@ const Settings = ({
     e.preventDefault();
     const day = parseInt(manualDay);
     if (!isNaN(day) && day >= 1 && day <= 31) {
-      onUpdateBudget(day === 31 ? 0 : day); // CORRECTION : appelle onUpdateBudget
+      onUpdateBudget(day === 31 ? 0 : day);
       setManualDay('');
     }
   };
@@ -388,7 +387,7 @@ const Settings = ({
                 <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">1. Choisir une icône</span>
                 <div className="grid grid-cols-5 gap-1.5 p-2 bg-white rounded-2xl border border-indigo-100 max-h-40 overflow-y-auto no-scrollbar">
                   {EMOJI_LIST.map(e => (
-                    <button key={e} onClick={() => setNewCat({...newCat, icon: e})} className={`w-8 h-8 flex items-center justify-center rounded-xl text-lg transition-all ${newCat.icon === e ? 'bg-indigo-600 shadow-md scale-110' : 'hover:bg-slate-50'}`}>
+                    <button key={e} onClick={() => setNewCat({...newCat, icon: e})} className={`w-8 h-8 flex items-center justify-center rounded-xl text-lg transition-all ${newCat.icon === e ? 'bg-indigo-600 shadow-md scale-110 text-white' : 'hover:bg-slate-50'}`}>
                       {e}
                     </button>
                   ))}
