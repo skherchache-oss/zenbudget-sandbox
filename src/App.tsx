@@ -311,22 +311,63 @@ const App: React.FC = () => {
 
   const headerPhoto = (fbUser && fbUser.uid !== 'local-user' && localStorage.getItem(`user_photo_hd_${fbUser.uid}`)) || state.user?.photoURL;
 
+  // --- ÉCRAN DE CHARGEMENT AMÉLIORÉ ---
   if (authLoading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-slate-950 gap-4">
-      <div className="relative">
+    <div className="h-screen flex flex-col items-center justify-center bg-slate-950 gap-8">
+      <style>{`
+        @keyframes shine {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .text-shine {
+          background: linear-gradient(90deg, #4f46e5 0%, #ffffff 50%, #4f46e5 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shine 3s linear infinite;
+        }
+      `}</style>
+      
+      <motion.div 
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ 
+          scale: [1, 1.05, 1],
+          opacity: 1 
+        }}
+        transition={{ 
+          scale: { repeat: Infinity, duration: 3, ease: "easeInOut" },
+          opacity: { duration: 0.5 }
+        }}
+        className="relative"
+      >
         <img 
           src="/ZB-logo-192.png" 
           alt="ZenBudget" 
-          className="w-16 h-16 rounded-[22px] shadow-2xl border border-white/10 animate-pulse"
+          className="w-28 h-28 rounded-[32px] shadow-[0_0_60px_rgba(79,70,229,0.4)] border border-white/10"
         />
-      </div>
-      <h1 className="text-2xl font-black tracking-tighter italic text-white/90">
-        ZenBudget
-      </h1>
-      <div className="flex gap-1">
-        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+      </motion.div>
+      
+      <div className="flex flex-col items-center gap-3">
+        <h1 className="text-4xl font-black tracking-[0.25em] uppercase italic text-shine">
+          ZenBudget
+        </h1>
+        <div className="flex gap-2.5">
+          <motion.div 
+            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 1.2, delay: 0 }}
+            className="w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(79,70,229,0.8)]"
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }}
+            className="w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(79,70,229,0.8)]"
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }}
+            className="w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(79,70,229,0.8)]"
+          />
+        </div>
       </div>
     </div>
   );
