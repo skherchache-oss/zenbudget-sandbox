@@ -44,7 +44,7 @@ const AccountItem = ({ acc, isActive, onDelete, onRename, onSelect, onShowPremiu
 const Settings = ({ 
   state, user, onUpdateUser, onLogout, onLogin, onDeleteAccount, 
   onSetActiveAccount, onRenameAccount, onAddCategory, onDeleteCategory, 
-  onUpdateCycleDay, onBackup, onImport, onReset, onDeleteUserAccount, onShowWelcome 
+  onUpdateBudget, onBackup, onImport, onReset, onDeleteUserAccount, onShowWelcome 
 }: any) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isEditingUserName, setIsEditingUserName] = useState(false);
@@ -65,8 +65,8 @@ const Settings = ({
 
   const activeAccount = state.accounts.find((a: any) => a.id === state.activeAccountId);
   
-  // CORRECTION : On vérifie le cycleDay dans le compte actif OU le state global
-  const currentCycleDay = activeAccount?.cycleDay !== undefined ? activeAccount.cycleDay : (state.cycleDay || 0);
+  // CORRECTION : On utilise cycleEndDay pour correspondre à la structure de l'App
+  const currentCycleDay = activeAccount?.cycleEndDay !== undefined ? activeAccount.cycleEndDay : (state.cycleEndDay || 0);
   const presets = [1, 5, 25, 28, 0];
   const isCustomDay = !presets.includes(currentCycleDay);
 
@@ -141,7 +141,7 @@ const Settings = ({
   };
 
   const updateCycleDay = (day: number) => {
-    onUpdateCycleDay(day);
+    onUpdateBudget(day); // CORRECTION : appelle onUpdateBudget
     setManualDay('');
   };
 
@@ -149,8 +149,7 @@ const Settings = ({
     e.preventDefault();
     const day = parseInt(manualDay);
     if (!isNaN(day) && day >= 1 && day <= 31) {
-      // Si 31 est saisi, on traite cela comme "fin de mois" (0)
-      onUpdateCycleDay(day === 31 ? 0 : day);
+      onUpdateBudget(day === 31 ? 0 : day); // CORRECTION : appelle onUpdateBudget
       setManualDay('');
     }
   };
@@ -176,7 +175,7 @@ const Settings = ({
   };
 
   const isRealUser = user && user.uid !== 'local-user';
-  const currentPhoto = (user && localStorage.getItem(`user_photo_hd_${user.uid}`)) || state.user.photoURL;
+  const currentPhoto = (user && localStorage.getItem(`user_photo_hd_${user.uid}`)) || (user ? user.photoURL : null);
 
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
@@ -285,7 +284,7 @@ const Settings = ({
                 </span>
               )}
               <div className="absolute inset-0 bg-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                  <svg className="w-6 h-6 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
               </div>
               {isUploading && <div className="absolute inset-0 flex items-center justify-center bg-black/20"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
             </div>
