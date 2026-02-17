@@ -360,7 +360,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex-1"><p className="text-[13px] font-bold text-slate-700 leading-snug italic">{aiAdvice}</p></div>
       </div>
 
-      {/* SECTION PROJETS */}
+      {/* SECTION PROJETS - RÉDUITE */}
       <div className="px-1">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
@@ -372,11 +372,13 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="absolute -top-3 -right-2 text-lg drop-shadow-sm select-none">👑</div>
           </button>
         </div>
-        <div className="grid grid-cols-1 gap-3">
-          <button onClick={() => setPremiumType('PROJECTS')} className="group py-10 px-4 border-2 border-dashed border-slate-100 rounded-[35px] text-center bg-slate-50/30 hover:bg-indigo-50/30 hover:border-indigo-100 transition-all flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">🎯</div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Épargnez pour vos rêves</p>
-            <span className="text-[9px] font-bold text-indigo-500/60">(Bientôt disponible)</span>
+        <div className="grid grid-cols-1">
+          <button onClick={() => setPremiumType('PROJECTS')} className="group p-4 border border-dashed border-slate-200 rounded-[24px] bg-slate-50/50 hover:bg-indigo-50/30 transition-all flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-lg shadow-sm">🎯</div>
+            <div className="text-left">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Épargnez pour vos rêves</p>
+              <span className="text-[9px] font-bold text-indigo-500/60 block mt-0.5">Bientôt disponible</span>
+            </div>
           </button>
         </div>
       </div>
