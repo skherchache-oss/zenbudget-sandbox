@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Star, Send, Camera, Trash2, Edit2, Plus as IconPlus, 
-  ChevronRight, Info, ShieldCheck, Scale, FileText 
+  ChevronRight, Info, ShieldCheck, Scale, FileText, Users
 } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 
@@ -28,8 +28,10 @@ const AccountItem = ({ acc, isActive, onDelete, onRename, onSelect, onShowPremiu
       <button onClick={() => onRename(acc)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
         <Edit2 size={14} />
       </button>
-      <button onClick={() => onShowPremium()} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
-        <IconPlus size={14} />
+      {/* Bouton Partage Premium */}
+      <button onClick={() => onShowPremium()} className={`p-2 rounded-xl transition-colors flex items-center gap-1 ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-indigo-400'}`}>
+        <span className="text-[10px]">💎</span>
+        <Users size={14} />
       </button>
       {canDelete && (
         <button onClick={() => onDelete(acc.id)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-red-300'}`}>
@@ -417,7 +419,7 @@ const Settings = ({
         </div>
       </section>
 
-      {/* CYCLE BUDGÉTAIRE CORRIGÉ */}
+      {/* CYCLE BUDGÉTAIRE */}
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
