@@ -328,14 +328,33 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* AIDE */}
+      {/* AIDE (MODIFIÉ AVEC LE POINT 4) */}
       <section> 
         <SectionTitle title="Aide" /> 
-        <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm"> 
-          <button onClick={onShowWelcome} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group"> 
+        <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm p-6 space-y-6"> 
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-black shrink-0">1</span>
+              <p className="text-[11px] text-slate-600 leading-relaxed font-medium">Définissez votre <strong className="text-slate-900">budget mensuel</strong> pour chaque catégorie et suivez vos dépenses en temps réel.</p>
+            </div>
+            <div className="flex gap-4">
+              <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-black shrink-0">2</span>
+              <p className="text-[11px] text-slate-600 leading-relaxed font-medium">L'IA ZenBudget analyse vos habitudes et vous donne des conseils personnalisés pour <strong className="text-slate-900">mieux épargner</strong>.</p>
+            </div>
+            <div className="flex gap-4">
+              <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-black shrink-0">3</span>
+              <p className="text-[11px] text-slate-600 leading-relaxed font-medium">Configurez votre <strong className="text-slate-900">cycle budgétaire</strong> selon votre date de paie pour une vision précise de votre reste à vivre.</p>
+            </div>
+            <div className="flex gap-4">
+              <span className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-black shrink-0">4</span>
+              <p className="text-[11px] text-slate-600 leading-relaxed font-medium">Utilisez le <strong className="text-slate-900">Backup</strong> pour sauvegarder l'intégralité de vos données ou les restaurer, et l'<strong className="text-slate-900">Export CSV</strong> pour consulter vos comptes sur Excel.</p>
+            </div>
+          </div>
+          
+          <button onClick={onShowWelcome} className="w-full flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors group"> 
             <div className="flex items-center gap-3"> 
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-sm group-active:scale-90 transition-transform">📖</div> 
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Guide Zen de l'application</span> 
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-sm group-active:scale-90 transition-transform">📖</div> 
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Guide complet</span> 
             </div> 
             <svg className="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </button> 
@@ -376,12 +395,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* GESTION CATÉGORIES AMÉLIORÉE (LISTE DÉROULANTE/COMPACTE) */}
+      {/* GESTION CATÉGORIES AMÉLIORÉE */}
       <section>
         <SectionTitle title="Mes Catégories" />
         <div className="bg-white rounded-[32px] border border-slate-100 p-5 shadow-sm space-y-5">
-          
-          {/* Liste compacte avec scrollbar si trop longue */}
           <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 no-scrollbar">
             {state.categories.map(cat => (
               <div key={cat.id} className="group flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 transition-all">
@@ -400,7 +417,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
           {showAddCat ? (
             <div className="p-4 bg-indigo-50/50 rounded-[24px] border border-indigo-100 space-y-4 animate-in slide-in-from-top-4 duration-300">
-              
               <div className="space-y-2">
                 <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">1. Choisir une icône</span>
                 <div className="grid grid-cols-5 gap-1.5 p-2 bg-white rounded-2xl border border-indigo-100 max-h-40 overflow-y-auto no-scrollbar">
@@ -472,11 +488,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* --- SECTION : A PROPOS & LÉGAL (CORRIGÉE ALIGNEMENT GAUCHE) --- */}
+      {/* A PROPOS & LÉGAL */}
       <section>
         <SectionTitle title="À propos & Légal" />
         <div className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm">
-          {/* Version / Info */}
           <div className="p-4 border-b border-slate-50 flex items-center justify-between">
              <div className="flex items-center gap-3 w-full">
                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
@@ -489,11 +504,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
              </div>
           </div>
 
-          {/* RGPD / Confidentialité */}
-          <button 
-            onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')}
-            className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-          >
+          <button onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')} className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors">
              <div className="flex items-center gap-3 flex-1">
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                   <ShieldCheck size={16} />
@@ -503,11 +514,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
              <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
           </button>
 
-          {/* CGU */}
-          <button 
-            onClick={() => window.open('https://tonsite.com/cgu', '_blank')}
-            className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-          >
+          <button onClick={() => window.open('https://tonsite.com/cgu', '_blank')} className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors">
              <div className="flex items-center gap-3 flex-1">
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                   <Scale size={16} />
@@ -517,11 +524,7 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
              <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
           </button>
 
-          {/* Mentions Légales */}
-          <button 
-            onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')}
-            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-          >
+          <button onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')} className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
              <div className="flex items-center gap-3 flex-1">
                 <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
