@@ -14,7 +14,7 @@ interface RecurringManagerProps {
   onMonthChange: (offset: number) => void;
 }
 
-// --- COMPOSANT GRAPHIQUE CORRIGÉ ---
+// --- COMPOSANT GRAPHIQUE DYNAMIQUE STYLE "BOARD" ---
 const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: string }[], total: number }> = ({ data, total }) => {
   let cumulativePercent = 0;
 
@@ -26,14 +26,15 @@ const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: 
   }
 
   return (
-    <div className="relative w-44 h-44 mx-auto flex items-center justify-center">
-      <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
+    <div className="relative w-56 h-56 mx-auto flex items-center justify-center">
+      <svg viewBox="-1.1 -1.1 2.2 2.2" className="transform -rotate-90 w-full h-full drop-shadow-xl">
         {total === 0 || data.length === 0 ? (
           <circle cx="0" cy="0" r="1" fill="#f1f5f9" />
         ) : (
           data.map((slice, i) => {
             const slicePercent = slice.value / total;
-            // Si une seule part fait 100%, on dessine un cercle complet
+            
+            // Si une seule part fait 100%
             if (slicePercent >= 0.999) {
               return <circle key={i} cx="0" cy="0" r="1" fill={slice.color} />;
             }
@@ -54,25 +55,32 @@ const RecurringPieChart: React.FC<{ data: { name: string, value: number, color: 
                 key={i} 
                 d={pathData} 
                 fill={slice.color} 
-                className="transition-all duration-500 ease-in-out" 
+                className="transition-all duration-700 ease-in-out"
+                stroke="white"
+                strokeWidth="0.01"
               />
             );
           })
         )}
-        {/* Cercle central pour l'effet Donut */}
-        <circle cx="0" cy="0" r="0.78" fill="white" />
+        {/* Cercle central pour l'effet Donut pur style Board */}
+        <circle cx="0" cy="0" r="0.72" fill="white" />
       </svg>
+      
+      {/* Overlay central avec le montant total des charges */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter italic">Total Charges</span>
-        <span className="text-xl font-black text-slate-900 leading-none">
-          -{Math.round(total).toLocaleString('fr-FR')}€
-        </span>
+        <div className="bg-slate-50/80 backdrop-blur-sm rounded-full w-32 h-32 flex flex-col items-center justify-center border border-slate-100 shadow-inner">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter italic">Total Fixe</span>
+          <span className="text-2xl font-black text-slate-900 leading-none mt-1">
+            -{Math.round(total).toLocaleString('fr-FR')}€
+          </span>
+          <div className="w-6 h-1 bg-red-500 rounded-full mt-2 opacity-50" />
+        </div>
       </div>
     </div>
   );
 };
 
-// --- COMPOSANT ITEM (INCHANGÉ) ---
+// --- COMPOSANT ITEM (PRÉSERVÉ) ---
 const RecurringItem: React.FC<{
   tpl: RecurringTemplate;
   category?: Category;
@@ -144,8 +152,8 @@ const RecurringItem: React.FC<{
   );
 };
 
-// --- COMPOSANT PRINCIPAL (STRUCTURE PRÉSERVÉE) ---
-const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates, categories, onUpdate, totalBalance, month, year, onMonthChange }) => {
+// --- COMPOSANT PRINCIPAL ---
+const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates, categories, onUpdate, month, year }) => {
   const [editingTpl, setEditingTpl] = useState<RecurringTemplate | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
@@ -222,6 +230,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <h2 className="text-xl font-black tracking-tighter text-slate-800 italic uppercase">Flux Fixes</h2>
       </div>
 
+      {/* Carte des Revenus (Haut) */}
       <div className="bg-emerald-500 p-8 rounded-[40px] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
         <div className="flex items-center gap-3 mb-2">
@@ -231,24 +240,30 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
         <div className="text-4xl font-black text-white">+{totalIncomes.toLocaleString('fr-FR')}€</div>
       </div>
 
+      {/* Zone Graphique style BOARD */}
       <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100">
         <div className="flex items-center gap-2 mb-8">
           <PieChart className="text-indigo-500 w-4 h-4" />
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Répartition des charges</h3>
         </div>
+        
         <div className="flex flex-col items-center">
           <RecurringPieChart data={expenseChartData} total={totalExpenses} />
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-10">
-            {expenseChartData.slice(0, 6).map((cat, i) => (
-              <div key={i} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100/50">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">{cat.name}</span>
+          
+          {/* Légende horizontale défilante */}
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mt-10">
+            {expenseChartData.map((cat, i) => (
+              <div key={i} className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100 transition-all hover:bg-slate-100">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-tight">{cat.name}</span>
+                <span className="text-[8px] font-black text-slate-900 ml-1">{Math.round((cat.value / totalExpenses) * 100)}%</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* Liste détaillée par catégorie */}
       <div className="space-y-4">
         <div className="px-2 flex items-center justify-between">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Détails par catégorie</h3>
@@ -298,6 +313,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
             );
         })}
 
+        {/* Formulaire d'ajout / Édition */}
         <div ref={formRef} className="pt-4">
           {showAdd ? (
             <div className={`p-6 rounded-[32px] border shadow-xl animate-in slide-in-from-bottom duration-300 ${editingTpl ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-slate-100'}`}>
@@ -342,7 +358,7 @@ const RecurringManager: React.FC<RecurringManagerProps> = ({ recurringTemplates,
               </form>
             </div>
           ) : (
-            <button onClick={() => setShowAdd(true)} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 bg-white active:scale-95 transition-all shadow-sm">
+            <button onClick={() => setShowAdd(true)} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-400 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-3 bg-white active:scale-95 transition-all shadow-sm hover:border-indigo-200 hover:text-indigo-400">
               <IconPlus className="w-5 h-5" /> Programmer un nouveau flux
             </button>
           )}
