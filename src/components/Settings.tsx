@@ -14,36 +14,29 @@ const SectionTitle = ({ title }: { title: string }) => (
 );
 
 const AccountItem = ({ acc, isActive, onDelete, onRename, onSelect, onShowPremium, canDelete }: any) => (
-  <div className="space-y-2">
-    <div className={`group flex items-center justify-between p-4 rounded-[24px] transition-all border-2 ${isActive ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white border-slate-50 hover:border-indigo-100'}`}>
-      <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => onSelect(acc.id)}>
-        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-50 text-indigo-600'}`}>
-          {acc.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex flex-col">
-          <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-700'}`}>{acc.name}</span>
-          {isActive && <span className="text-[7px] font-black text-indigo-200 uppercase tracking-widest">Compte Actif</span>}
-        </div>
+  <div className={`group flex items-center justify-between p-4 rounded-[24px] transition-all border-2 ${isActive ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100' : 'bg-white border-slate-50 hover:border-indigo-100'}`}>
+    <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => onSelect(acc.id)}>
+      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-50 text-indigo-600'}`}>
+        {acc.name.charAt(0).toUpperCase()}
       </div>
-      <div className="flex items-center gap-1">
-        <button onClick={() => onRename(acc)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
-          <Edit2 size={14} />
-        </button>
-        <button onClick={() => onShowPremium()} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
-          <IconPlus size={14} />
-        </button>
-        {canDelete && (
-          <button onClick={() => onDelete(acc.id)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-red-300'}`}>
-            <Trash2 size={14} />
-          </button>
-        )}
+      <div className="flex flex-col">
+        <span className={`text-[11px] font-black uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-700'}`}>{acc.name}</span>
+        {isActive && <span className="text-[7px] font-black text-indigo-200 uppercase tracking-widest">Compte Actif</span>}
       </div>
     </div>
-    {isActive && (
-      <p className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest px-4">
-        💎 Le partage de compte sera bientôt disponible sur ZenBudget Premium
-      </p>
-    )}
+    <div className="flex items-center gap-1">
+      <button onClick={() => onRename(acc)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
+        <Edit2 size={14} />
+      </button>
+      <button onClick={() => onShowPremium()} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-slate-300'}`}>
+        <IconPlus size={14} />
+      </button>
+      {canDelete && (
+        <button onClick={() => onDelete(acc.id)} className={`p-2 rounded-xl transition-colors ${isActive ? 'hover:bg-white/10 text-indigo-200' : 'hover:bg-slate-50 text-red-300'}`}>
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
   </div>
 );
 
@@ -61,7 +54,7 @@ const Settings = ({
   const [newCat, setNewCat] = useState({ name: '', icon: '💰', color: '#6366f1' });
   const [manualDay, setManualDay] = useState('');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackStep, setFeedbackStep] = useState<'RATING' | 'FEATURES'>('RATING');
+  const [feedbackStep, setFeedbackStep] = useState<'INFO' | 'RATING' | 'FEATURES'>('INFO');
   const [userRating, setUserRating] = useState<number | null>(null);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [premiumType, setPremiumType] = useState<'ACCOUNTS' | 'SHARE' | 'GENERAL'>('GENERAL');
@@ -152,8 +145,9 @@ const Settings = ({
   const handleManualDayUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     const day = parseInt(manualDay);
-    if (day >= 1 && day <= 31) {
-      onUpdateCycleDay(day);
+    if (!isNaN(day) && day >= 1 && day <= 31) {
+      onUpdateCycleDay(day === 31 ? 0 : day);
+      setManualDay('');
     }
   };
 
@@ -166,7 +160,7 @@ const Settings = ({
   const handleSendFeedback = () => {
     alert("Merci pour votre retour ! Nous vous préviendrons dès que ces fonctionnalités seront prêtes.");
     setShowFeedbackModal(false);
-    setFeedbackStep('RATING');
+    setFeedbackStep('INFO');
     setUserRating(null);
     setSelectedFeatures([]);
   };
@@ -183,7 +177,7 @@ const Settings = ({
   return ( 
     <div className="space-y-6 pb-32 overflow-y-auto no-scrollbar h-full px-4 pt-6"> 
       
-      {/* MODAL FEEDBACK PREMIUM */}
+      {/* MODAL FEEDBACK PREMIUM DYNAMIQUE */}
       <AnimatePresence>
         {showFeedbackModal && (
           <div className="fixed inset-0 flex items-center justify-center p-4 z-[99999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -205,10 +199,24 @@ const Settings = ({
 
               <div className="text-center">
                 <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
-                  {feedbackStep === 'RATING' ? '✨' : '💎'}
+                  {feedbackStep === 'INFO' ? '💎' : feedbackStep === 'RATING' ? '✨' : '🚀'}
                 </div>
 
-                {feedbackStep === 'RATING' ? (
+                {feedbackStep === 'INFO' ? (
+                  <>
+                    <h3 className="text-xl font-black text-slate-900 mb-2 italic">ZenBudget Premium</h3>
+                    <div className="bg-indigo-50/50 rounded-2xl p-4 mb-6">
+                      <p className="text-[11px] text-indigo-600 font-black uppercase tracking-wider leading-relaxed">
+                        {premiumType === 'SHARE' 
+                          ? "Le partage de compte sera bientôt disponible !" 
+                          : "La création de plusieurs comptes sera bientôt disponible !"}
+                      </p>
+                    </div>
+                    <button onClick={() => setFeedbackStep('RATING')}
+                      className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl"
+                    >Donner mon avis</button>
+                  </>
+                ) : feedbackStep === 'RATING' ? (
                   <>
                     <h3 className="text-xl font-black text-slate-900 mb-1 italic">L'app vous plaît ?</h3>
                     <p className="text-xs text-slate-500 font-medium mb-6">Votre avis nous aide énormément.</p>
@@ -320,21 +328,19 @@ const Settings = ({
       {/* COMPTES */}
       <section> 
         <SectionTitle title="Mes Comptes" /> 
-        <div className="space-y-4"> 
-          <div className="space-y-1">
-            {state.accounts.map((acc: any) => ( 
-              <AccountItem 
-                key={acc.id} 
-                acc={acc} 
-                isActive={state.activeAccountId === acc.id} 
-                onDelete={onDeleteAccount} 
-                onRename={(a: any) => { setEditingAccountId(a.id); setEditName(a.name); }} 
-                onSelect={onSetActiveAccount} 
-                onShowPremium={() => { setPremiumType('SHARE'); setShowFeedbackModal(true); }}
-                canDelete={state.accounts.length > 1} 
-              /> 
-            ))} 
-          </div>
+        <div className="space-y-1"> 
+          {state.accounts.map((acc: any) => ( 
+            <AccountItem 
+              key={acc.id} 
+              acc={acc} 
+              isActive={state.activeAccountId === acc.id} 
+              onDelete={onDeleteAccount} 
+              onRename={(a: any) => { setEditingAccountId(a.id); setEditName(a.name); }} 
+              onSelect={onSetActiveAccount} 
+              onShowPremium={() => { setPremiumType('SHARE'); setShowFeedbackModal(true); setFeedbackStep('INFO'); }}
+              canDelete={state.accounts.length > 1} 
+            /> 
+          ))} 
            
           {editingAccountId && ( 
             <div className="bg-white p-3 rounded-2xl border-2 border-indigo-100 mb-2"> 
@@ -346,15 +352,10 @@ const Settings = ({
             </div> 
           )} 
 
-          <div className="space-y-2">
-            <button onClick={() => { setPremiumType('ACCOUNTS'); setShowFeedbackModal(true); }} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
-              <span className="opacity-40 group-hover:opacity-100">💎</span>
-              <IconPlus className="w-3 h-3" /> Ajouter un compte 
-            </button> 
-            <p className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest px-4 text-center">
-              💎 La création de plusieurs comptes sera bientôt disponible sur ZenBudget Premium
-            </p>
-          </div>
+          <button onClick={() => { setPremiumType('ACCOUNTS'); setShowFeedbackModal(true); setFeedbackStep('INFO'); }} className="w-full py-3.5 border-2 border-dashed border-slate-100 text-slate-300 font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 rounded-2xl hover:border-indigo-200 hover:text-indigo-500 transition-all group"> 
+            <span className="opacity-40 group-hover:opacity-100">💎</span>
+            <IconPlus className="w-3 h-3" /> Ajouter un compte 
+          </button> 
         </div> 
       </section>
 
@@ -416,23 +417,46 @@ const Settings = ({
         </div>
       </section>
 
-      {/* CYCLE BUDGÉTAIRE */}
+      {/* CYCLE BUDGÉTAIRE CORRIGÉ */}
       <section>
         <SectionTitle title="Cycle Budgétaire" />
         <div className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm space-y-4">
           <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-1">Définissez le jour de clôture du mois (jour de paie).</p>
           <div className="grid grid-cols-5 gap-1.5">
             {presets.map((day) => (
-              <button key={day} onClick={() => updateCycleDay(day)} className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${currentCycleDay === day ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>
+              <button 
+                key={day} 
+                type="button"
+                onClick={() => updateCycleDay(day)} 
+                className={`py-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${currentCycleDay === day ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-50 bg-slate-50 text-slate-400'}`}
+              >
                 <span className="text-[11px] font-black">{day === 0 ? '31' : day}</span>
                 <span className="text-[5px] font-black uppercase tracking-tighter">{day === 0 ? 'Fin de mois' : 'Du mois'}</span>
               </button>
             ))}
-            {isCustomDay && <button disabled className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg"><span className="text-[11px] font-black">{currentCycleDay}</span><span className="text-[5px] font-black uppercase tracking-tighter">Actif</span></button>}
+            {isCustomDay && (
+              <button disabled className="py-3 rounded-xl border-2 border-indigo-600 bg-indigo-600 text-white flex flex-col items-center justify-center gap-1 shadow-lg">
+                <span className="text-[11px] font-black">{currentCycleDay}</span>
+                <span className="text-[5px] font-black uppercase tracking-tighter">Actif</span>
+              </button>
+            )}
           </div>
           <form onSubmit={handleManualDayUpdate} className="flex gap-2">
-            <input type="number" min="1" max="31" value={manualDay} onChange={e => setManualDay(e.target.value)} placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" />
-            <button type="submit" className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest">OK</button>
+            <input 
+              type="number" 
+              min="1" 
+              max="31" 
+              value={manualDay} 
+              onChange={e => setManualDay(e.target.value)} 
+              placeholder={isCustomDay ? `Jour actuel: ${currentCycleDay}` : "Autre jour (1-31)"} 
+              className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-2.5 text-[10px] font-bold outline-none placeholder:text-slate-300" 
+            />
+            <button 
+              type="submit" 
+              className="bg-slate-900 text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest active:scale-95 transition-transform"
+            >
+              OK
+            </button>
           </form>
         </div>
       </section>
@@ -468,42 +492,16 @@ const Settings = ({
           </div>
 
           <div className="flex flex-col">
-            <button 
-              onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')}
-              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50"
-            >
-               <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                    <ShieldCheck size={14} />
-                  </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Politique de Confidentialité</span>
-               </div>
+            <button onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')} className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50">
+               <div className="flex items-center gap-3"><div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><ShieldCheck size={14} /></div><span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Politique de Confidentialité</span></div>
                <FileText size={12} className="text-slate-200" />
             </button>
-
-            <button 
-              onClick={() => window.open('https://tonsite.com/cgu', '_blank')}
-              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50"
-            >
-               <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                    <Scale size={14} />
-                  </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Conditions d'Utilisation</span>
-               </div>
+            <button onClick={() => window.open('https://tonsite.com/cgu', '_blank')} className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50">
+               <div className="flex items-center gap-3"><div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0"><Scale size={14} /></div><span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Conditions d'Utilisation</span></div>
                <FileText size={12} className="text-slate-200" />
             </button>
-
-            <button 
-              onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')}
-              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
-            >
-               <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                  </div>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Mentions Légales</span>
-               </div>
+            <button onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')} className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+               <div className="flex items-center gap-3"><div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 shrink-0"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg></div><span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Mentions Légales</span></div>
                <FileText size={12} className="text-slate-200" />
             </button>
           </div>
