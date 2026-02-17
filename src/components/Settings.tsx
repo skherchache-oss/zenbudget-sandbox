@@ -376,12 +376,10 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div> 
       </section>
 
-      {/* GESTION CATÉGORIES AMÉLIORÉE (LISTE DÉROULANTE/COMPACTE) */}
+      {/* GESTION CATÉGORIES AMÉLIORÉE */}
       <section>
         <SectionTitle title="Mes Catégories" />
         <div className="bg-white rounded-[32px] border border-slate-100 p-5 shadow-sm space-y-5">
-          
-          {/* Liste compacte avec scrollbar si trop longue */}
           <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 no-scrollbar">
             {state.categories.map(cat => (
               <div key={cat.id} className="group flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-indigo-100 transition-all">
@@ -400,7 +398,6 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
 
           {showAddCat ? (
             <div className="p-4 bg-indigo-50/50 rounded-[24px] border border-indigo-100 space-y-4 animate-in slide-in-from-top-4 duration-300">
-              
               <div className="space-y-2">
                 <span className="text-[8px] font-black uppercase text-indigo-400 tracking-widest ml-1">1. Choisir une icône</span>
                 <div className="grid grid-cols-5 gap-1.5 p-2 bg-white rounded-2xl border border-indigo-100 max-h-40 overflow-y-auto no-scrollbar">
@@ -458,78 +455,77 @@ const Settings: React.FC<SettingsProps> = ({ state, user, onUpdateAccounts, onSe
         </div>
       </section>
 
-      {/* SAUVEGARDE */}
+      {/* SAUVEGARDE DES DONNÉES */}
       <section>
-        <SectionTitle title="Sauvegarde" />
+        <SectionTitle title="Sauvegarde des données" />
         <div className="bg-white rounded-[24px] border border-slate-50 overflow-hidden shadow-sm">
           <button onClick={() => onBackup(activeAccount?.name)} className="w-full flex items-center justify-between p-4 hover:bg-slate-50 border-b border-slate-50">
-            <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px]">💾</div><span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Exporter backup</span></div>
+            <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-[10px]">💾</div><span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Export Backup</span></div>
           </button>
           <input type="file" ref={fileInputRef} hidden accept=".backup,.json" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
           <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-slate-50">
-            <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div><span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Importer backup</span></div>
+            <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-[10px]">📂</div><span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Import Backup</span></div>
           </button>
         </div>
       </section>
 
-      {/* --- SECTION : A PROPOS & LÉGAL (CORRIGÉE ALIGNEMENT GAUCHE) --- */}
+      {/* À PROPOS & LÉGAL (RESSERRÉ SUR 3 LIGNES) */}
       <section>
         <SectionTitle title="À propos & Légal" />
         <div className="bg-white rounded-[28px] border border-slate-100 overflow-hidden shadow-sm">
-          {/* Version / Info */}
-          <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-             <div className="flex items-center gap-3 w-full">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
-                  <Info size={16} />
+          {/* Ligne Version */}
+          <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
+                  <Info size={14} />
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">ZenBudget App</span>
-                  <span className="text-[8px] font-bold text-slate-400">Version 1.0.0 (Bêta)</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-700 leading-none mb-0.5">ZenBudget App</span>
+                  <span className="text-[8px] font-bold text-slate-400">Version 1.0.0 Stable</span>
                 </div>
              </div>
           </div>
 
-          {/* RGPD / Confidentialité */}
-          <button 
-            onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')}
-            className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-          >
-             <div className="flex items-center gap-3 flex-1">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                  <ShieldCheck size={16} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 text-left">Politique de Confidentialité (RGPD)</span>
-             </div>
-             <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
-          </button>
+          <div className="flex flex-col">
+            <button 
+              onClick={() => window.open('https://tonsite.com/confidentialite', '_blank')}
+              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50"
+            >
+               <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                    <ShieldCheck size={14} />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Politique de Confidentialité</span>
+               </div>
+               <FileText size={12} className="text-slate-200" />
+            </button>
 
-          {/* CGU */}
-          <button 
-            onClick={() => window.open('https://tonsite.com/cgu', '_blank')}
-            className="w-full p-4 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50 transition-colors"
-          >
-             <div className="flex items-center gap-3 flex-1">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                  <Scale size={16} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 text-left">Conditions Générales d'Utilisation</span>
-             </div>
-             <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
-          </button>
+            <button 
+              onClick={() => window.open('https://tonsite.com/cgu', '_blank')}
+              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50"
+            >
+               <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                    <Scale size={14} />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Conditions d'Utilisation</span>
+               </div>
+               <FileText size={12} className="text-slate-200" />
+            </button>
 
-          {/* Mentions Légales */}
-          <button 
-            onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')}
-            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-          >
-             <div className="flex items-center gap-3 flex-1">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
-                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 text-left">Mentions Légales</span>
-             </div>
-             <FileText size={12} className="text-slate-300 shrink-0 ml-2" />
-          </button>
+            <button 
+              onClick={() => window.open('https://tonsite.com/mentions-legales', '_blank')}
+              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+               <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Mentions Légales</span>
+               </div>
+               <FileText size={12} className="text-slate-200" />
+            </button>
+          </div>
         </div>
       </section>
 
