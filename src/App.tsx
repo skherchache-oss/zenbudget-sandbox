@@ -488,7 +488,7 @@ const App: React.FC = () => {
           />
         )}
         
-        {/* NOUVELLE POPUP WELCOME : Positionnement Fixe Absolu par rapport au viewport */}
+        {/* NOUVELLE POPUP WELCOME */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div 
@@ -510,36 +510,47 @@ const App: React.FC = () => {
                 <h2 className="text-xl font-black text-center italic text-slate-800 tracking-tight mb-4">Bienvenue sur ZenBudget</h2>
                 
                 <div className="space-y-3">
-                   <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex gap-3">
-                     <span className="font-black text-lg text-indigo-600">0.</span>
-                     <p className="text-[12px] font-bold text-indigo-900 leading-tight">
-                       Ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
-                     </p>
-                   </div>
-                   <div className="flex gap-3 px-1 items-start">
-                      <span className="font-black text-indigo-600">1.</span>
-                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                         Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span> <span className="text-[10px] text-indigo-500 font-bold">(au démarrage)</span>.
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 flex gap-3">
+                      <span className="font-black text-lg text-indigo-600">0.</span>
+                      <p className="text-[12px] font-bold text-indigo-900 leading-tight">
+                        Pour le démarrage, ajoutez votre solde bancaire actuel comme un <span className="underline decoration-indigo-300">Revenu ponctuel</span> dans le <span className="font-black">Journal</span>.
                       </p>
-                   </div>
-                   <div className="flex gap-3 px-1 items-start">
-                      <span className="font-black text-indigo-600">2.</span>
-                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                        Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
-                      </p>
-                   </div>
-                   <div className="flex gap-3 px-1 items-start">
-                      <span className="font-black text-indigo-600">3.</span>
-                      <p className="text-[12px] font-medium text-slate-600 leading-tight">
-                        Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
-                      </p>
-                   </div>
-                   <div className="flex gap-3 px-1 items-start opacity-80">
-                      <span className="font-black text-indigo-600">4.</span>
-                      <p className="text-[12px] font-medium text-slate-500 leading-tight italic">
-                        <span className="font-bold text-slate-800">Export Excel :</span> bientôt disponible pour les membres <span className="text-amber-600 font-bold">Premium</span> !
-                      </p>
-                   </div>
+                    </div>
+
+                    <div className="flex gap-3 px-1 items-start">
+                       <span className="font-black text-indigo-600">1.</span>
+                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
+                          Configurez vos flux fixes dans l'onglet <span className="font-bold text-slate-800">"Fixes"</span>.
+                       </p>
+                    </div>
+
+                    <div className="flex gap-3 px-1 items-start">
+                       <span className="font-black text-indigo-600 text-[10px] mt-0.5">•</span>
+                       <p className="text-[11px] font-bold text-indigo-500 leading-tight italic">
+                          Pensez aussi à ajuster votre <span className="underline">date de cycle budgétaire</span> (ex: jour de paie) tout en bas des <span className="font-black">Paramètres</span>.
+                       </p>
+                    </div>
+
+                    <div className="flex gap-3 px-1 items-start">
+                       <span className="font-black text-indigo-600">2.</span>
+                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
+                         Entrez vos variables depuis le calendrier dans votre <span className="font-bold text-slate-800">Journal</span>.
+                       </p>
+                    </div>
+
+                    <div className="flex gap-3 px-1 items-start">
+                       <span className="font-black text-indigo-600">3.</span>
+                       <p className="text-[12px] font-medium text-slate-600 leading-tight">
+                         Vérifiez votre <span className="font-bold text-indigo-700">"Disponible Réel"</span> depuis le <span className="font-bold text-indigo-700">Board</span> pour éviter le découvert.
+                       </p>
+                    </div>
+
+                    <div className="flex gap-3 px-1 items-start opacity-80">
+                       <span className="font-black text-indigo-600">4.</span>
+                       <p className="text-[12px] font-medium text-slate-500 leading-tight italic">
+                         <span className="font-bold text-slate-800">Export Excel :</span> bientôt disponible pour les membres <span className="text-amber-600 font-bold">Premium</span> !
+                       </p>
+                    </div>
                 </div>
 
                 <button 
